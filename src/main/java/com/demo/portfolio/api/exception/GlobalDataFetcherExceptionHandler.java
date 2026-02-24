@@ -34,8 +34,6 @@ import java.util.concurrent.CompletableFuture;
  *   <li>{@link IllegalArgumentException} &rarr; {@code BAD_REQUEST / 400}</li>
  *   <li>Any other {@link Throwable} &rarr; {@code INTERNAL_ERROR / 500}</li>
  * </ul>
- *
- * @see GraphQLErrorBuilder
  */
 @Slf4j
 @Component

@@ -1,5 +1,9 @@
 package com.demo.portfolio.api.service;
 
+import graphql.ExecutionResult;
+import graphql.ExecutionResultImpl;
+import graphql.GraphQLError;
+import graphql.GraphqlErrorBuilder;
 import graphql.schema.GraphQLEnumType;
 import graphql.schema.GraphQLEnumValueDefinition;
 import graphql.schema.GraphQLSchema;
@@ -9,16 +13,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.graphql.execution.GraphQlSource;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Service that post-processes the raw GraphQL specification map returned by
- * {@code ExecutionResult.toSpecification()} and enriches validation errors
- * related to invalid enum values.
+ * Service that post-processes {@link ExecutionResult} objects returned by the
+ * GraphQL engine and enriches validation errors related to invalid enum values.
  *
  * <h2>Problem</h2>
  * <p>
@@ -34,10 +35,11 @@ import java.util.regex.Pattern;
  *
  * <h2>Solution</h2>
  * <p>
- * This service scans every error in the specification map, uses a regex to
- * detect the enum-validation pattern, looks up the matching
+ * This service scans every {@link GraphQLError} in the {@link ExecutionResult},
+ * uses a regex to detect the enum-validation pattern, looks up the matching
  * {@link GraphQLEnumType} in the live schema via {@link GraphQlSource}, and
- * rewrites the message to include the full list of valid values:
+ * rebuilds the error with an enriched message that includes the full list of
+ * valid values:
  * </p>
  * <pre>{@code
  * "Invalid value 'SxHIPPED' for enum 'OrderStatus'.
@@ -48,6 +50,8 @@ import java.util.regex.Pattern;
  * All other errors are returned unmodified so existing error handling is not
  * affected.
  * </p>
+ *
+ * @see com.demo.portfolio.api.config.ErrorEnhancerInterceptor
  */
 @Slf4j
 @Service
@@ -67,53 +71,53 @@ public class GraphQLErrorEnhancerService {
     private final GraphQlSource graphQlSource;
 
     /**
-     * Enriches enum validation errors in the given GraphQL specification map.
+     * Enriches enum validation errors in the given {@link ExecutionResult}.
      *
      * <p>
-     * The method makes a shallow copy of the top-level map so the original
-     * {@code ExecutionResult} is not mutated. Each error entry whose message
-     * matches {@link #ENUM_ERROR_PATTERN} is replaced with an enriched version
-     * that includes the valid enum values. All other entries are kept as-is.
+     * If the result contains no errors, it is returned as-is. Otherwise, each
+     * error whose message matches {@link #ENUM_ERROR_PATTERN} is replaced with
+     * an enriched version that includes the valid enum values. A new
+     * {@link ExecutionResult} is built with the enhanced error list; the
+     * original data and extensions are preserved.
      * </p>
      *
-     * @param spec the raw specification map produced by
-     *             {@code ExecutionResult.toSpecification()}; must not be
-     *             {@code null}
-     * @return a new map identical to {@code spec} except that enum validation
-     *         error messages are enriched with the list of valid values
+     * @param result the {@link ExecutionResult} produced by the GraphQL engine;
+     *               must not be {@code null}
+     * @return the original result if no errors are present, or a new
+     *         {@link ExecutionResult} with enriched enum error messages
      */
-    @SuppressWarnings("unchecked")
-    public Map<String, Object> enhance(Map<String, Object> spec) {
-        List<Map<String, Object>> errors = (List<Map<String, Object>>) spec.get("errors");
+    public ExecutionResult enhance(ExecutionResult result) {
+        List<GraphQLError> errors = result.getErrors();
         if (errors == null || errors.isEmpty()) {
-            return spec;
+            return result;
         }
 
-        List<Map<String, Object>> enhanced = errors.stream()
+        List<GraphQLError> enhanced = errors.stream()
                 .map(this::enhanceError)
                 .toList();
 
-        Map<String, Object> result = new HashMap<>(spec);
-        result.put("errors", enhanced);
-        return result;
+        return ExecutionResultImpl.newExecutionResult()
+                .data(result.getData())
+                .errors(enhanced)
+                .extensions(result.getExtensions())
+                .build();
     }
 
     /**
-     * Enriches a single error entry if it matches the enum-validation pattern.
+     * Enriches a single {@link GraphQLError} if it matches the enum-validation
+     * pattern.
      *
      * <p>
      * If the error message does not match, or if the enum type cannot be found
-     * in the schema, the original error map is returned unchanged.
+     * in the schema, the original error is returned unchanged.
      * </p>
      *
-     * @param error a single error entry from the specification map; the
-     *              implementation reads the {@code "message"} key and, when
-     *              enhanced, writes a new {@code "message"} key
-     * @return either the original {@code error} map or a shallow copy with a
-     *         rewritten {@code "message"} value
+     * @param error a single {@link GraphQLError} from the execution result
+     * @return either the original error or a new {@link GraphQLError} with an
+     *         enriched message that includes valid enum values
      */
-    private Map<String, Object> enhanceError(Map<String, Object> error) {
-        String message = (String) error.get("message");
+    private GraphQLError enhanceError(GraphQLError error) {
+        String message = error.getMessage();
         if (message == null) {
             return error;
         }
@@ -124,12 +128,12 @@ public class GraphQLErrorEnhancerService {
         }
 
         String enumTypeName = matcher.group(1);
-        String invalidValue  = matcher.group(2);
+        String invalidValue = matcher.group(2);
 
         GraphQLSchema schema = graphQlSource.schema();
         GraphQLType type = schema.getType(enumTypeName);
         if (!(type instanceof GraphQLEnumType enumType)) {
-            log.debug("Enum type '{}' not found in schema; returning original error message", enumTypeName);
+            log.debug("Enum type '{}' not found in schema; returning original error", enumTypeName);
             return error;
         }
 
@@ -144,8 +148,12 @@ public class GraphQLErrorEnhancerService {
 
         log.debug("Enhanced enum error: {}", enrichedMessage);
 
-        Map<String, Object> enriched = new HashMap<>(error);
-        enriched.put("message", enrichedMessage);
-        return enriched;
+        return GraphqlErrorBuilder.newError()
+                .message(enrichedMessage)
+                .locations(error.getLocations())
+                .path(error.getPath())
+                .extensions(error.getExtensions())
+                .errorType(error.getErrorType())
+                .build();
     }
 }
