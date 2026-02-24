@@ -55,8 +55,9 @@ The application must follow a strict layered architecture:
     -   `.config`
     -   `.exception`
 - **Documentation**: 
-    -   Add **JavaDoc** for all main classes and every public method.
+    -   Add full comprehensive **JavaDoc** for all main classes and every methods that include a detailed description of parameters, return values, and exceptions.
     -   Ensure code is self-documenting where possible.
+    -   During Code-Review, verify that all new and modified code includes appropriate JavaDoc and adheres to the project's documentation standards.
 
 ## Testing Strategy
 - **Unit Tests**: Use JUnit 5 and Mockito for isolated definitions.
