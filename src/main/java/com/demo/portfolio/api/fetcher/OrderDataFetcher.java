@@ -31,12 +31,12 @@ public class OrderDataFetcher {
     private final CustomerMapper customerMapper;
 
     @DgsQuery
-    public Mono<OrderConnection> orders(@InputArgument String customerId, @InputArgument Integer page, @InputArgument Integer size) {
+    public Mono<OrderConnection> orders(@InputArgument String customerId, @InputArgument OrderStatus status,@InputArgument Integer page, @InputArgument Integer size) {
         int p = page != null ? page : 0;
         int s = size != null ? size : 10;
         Long cId = customerId != null ? Long.parseLong(customerId) : null;
         
-        return orderService.getOrders(cId, p, s)
+        return orderService.getOrders(cId, orderMapper.toEntity(status), p, s)
                 .map(orderPage -> {
                     List<OrderEdge> edges = orderPage.getContent().stream()
                             .map(entity -> OrderEdge.newBuilder()

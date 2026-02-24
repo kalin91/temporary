@@ -20,4 +20,12 @@ public interface OrderMapper {
     @Mapping(target = "orderDate", expression = "java(entity.getOrderDate().toString())")
     @Mapping(target = "customer", ignore = true) // Customer is fetched separately if needed
     Order toDto(OrderEntity entity);
+
+    // Enum domain -> enum GraphQL (mismos values: MapStruct lo hace solo)
+    com.demo.portfolio.api.generated.types.OrderStatus toDto(
+        com.demo.portfolio.api.domain.OrderStatus status);
+
+    // (opcional) GraphQL -> domain
+    com.demo.portfolio.api.domain.OrderStatus toEntity(
+        com.demo.portfolio.api.generated.types.OrderStatus status);
 }

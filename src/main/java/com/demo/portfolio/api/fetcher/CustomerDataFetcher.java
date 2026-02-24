@@ -81,7 +81,7 @@ public class CustomerDataFetcher {
     @DgsData(parentType = "Customer", field = "orders")
     public Mono<List<Order>> ordersForCustomer(DgsDataFetchingEnvironment dfe) {
         Customer customer = Objects.requireNonNull(dfe.getSource(), "Source for ordersForCustomer cannot be null");
-        return orderService.getOrders(Long.parseLong(customer.getId()), 0, 100)
+        return orderService.getOrders(Long.parseLong(customer.getId()), null, 0, 100)
                 .map(orderPage -> orderPage.getContent().stream()
                         .map(orderMapper::toDto)
                         .toList());

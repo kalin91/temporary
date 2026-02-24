@@ -1,7 +1,7 @@
 type Query {
     customers(page: Int = 0, size: Int = 10): CustomerConnection
     customer(id: ID!): Customer
-    orders(customerId: ID, page: Int = 0, size: Int = 10): OrderConnection
+    orders(customerId: ID, status: OrderStatus, page: Int = 0, size: Int = 10): OrderConnection
     order(id: ID!): Order
 }
 

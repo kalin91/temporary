@@ -29,20 +29,29 @@ public class OrderService {
     private final CustomerRepository customerRepository;
 
     /**
-     * Retrieves a paginated list of orders, optionally filtered by customer ID.
+     * Retrieves a paginated list of orders, optionally filtered by customer ID and/or status.
      *
      * @param customerId the optional customer ID
+     * @param status the order status to filter by
      * @param page the page number
      * @param size the page size
      * @return a Mono emitting the page of orders
      */
     @Transactional(readOnly = true)
-    public Mono<Page<OrderEntity>> getOrders(Long customerId, int page, int size) {
+    public Mono<Page<OrderEntity>> getOrders(Long customerId, OrderStatus status, int page, int size) {
         return Mono.fromCallable(() -> {
-            if (customerId != null) {
-                return orderRepository.findByCustomerId(customerId, PageRequest.of(page, size));
-            }
-            return orderRepository.findAll(PageRequest.of(page, size));
+            boolean hasCustomerId = customerId != null;
+            boolean hasStatus = status != null;
+            PageRequest pageRequest = PageRequest.of(page, size);
+            if(hasCustomerId && hasStatus) 
+                return orderRepository.findByCustomerIdAndStatus(customerId, status, pageRequest);
+            else if (hasStatus) 
+                return orderRepository.findByStatus(status, pageRequest);
+            
+            else if (hasCustomerId) 
+                return orderRepository.findByCustomerId(customerId, pageRequest);
+            
+            return orderRepository.findAll(pageRequest);
         }).subscribeOn(Schedulers.boundedElastic());
     }
 
