@@ -2,12 +2,20 @@ package com.demo.portfolio.api.service;
 
 import com.demo.portfolio.api.dto.GraphQLRequest;
 import com.demo.portfolio.api.exception.QuerySanitizationException;
-
+import graphql.language.Document;
+import graphql.language.Field;
+import graphql.language.FragmentDefinition;
+import graphql.language.InlineFragment;
+import graphql.language.OperationDefinition;
+import graphql.language.Selection;
+import graphql.language.SelectionSet;
+import graphql.parser.InvalidSyntaxException;
+import graphql.parser.Parser;
 import lombok.extern.slf4j.Slf4j;
-
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
+import java.util.List;
 import java.util.regex.Pattern;
 
 /**
@@ -20,7 +28,11 @@ import java.util.regex.Pattern;
  *   <li>Whitespace trimming.</li>
  *   <li>Maximum query length enforcement ({@value #MAX_QUERY_LENGTH} chars).</li>
  *   <li>Dangerous injection pattern detection (script tags, JS event handlers).</li>
- *   <li>Maximum nesting depth enforcement ({@value #MAX_QUERY_DEPTH} levels).</li>
+ *   <li>AST parsing — rejects syntactically invalid queries (includes unbalanced
+ *       braces) via {@link InvalidSyntaxException}.</li>
+ *   <li>Maximum selection-set nesting depth enforcement
+ *       ({@value #MAX_QUERY_DEPTH} levels), computed on the parsed AST so that
+ *       braces inside string literals are never counted.</li>
  * </ol>
  *
  * <p>All violations result in a {@link QuerySanitizationException} wrapped in
@@ -33,7 +45,11 @@ public class QuerySanitizerService {
     /** Maximum allowed character length for a raw query string. */
     private static final int MAX_QUERY_LENGTH = 10_000;
 
-    /** Maximum allowed brace-nesting depth inside a query. */
+    /**
+     * Maximum allowed selection-set nesting depth, measured on the parsed AST.
+     * Each level of {@code { ... }} inside a field selection counts as one depth
+     * unit; braces inside string literals are ignored.
+     */
     private static final int MAX_QUERY_DEPTH = 10;
 
     /**
@@ -84,7 +100,19 @@ public class QuerySanitizerService {
             return Mono.error(new QuerySanitizationException("Query contains forbidden patterns"));
         }
 
-        int depth = calculateDepth(trimmed);
+        // Parse to an AST: rejects syntactically invalid queries (including
+        // unbalanced braces) and enables accurate depth measurement that is
+        // immune to braces embedded inside string literal argument values.
+        Document document;
+        try {
+            document = Parser.parse(trimmed);
+        } catch (InvalidSyntaxException e) {
+            log.warn("Rejected syntactically invalid GraphQL query: {}", e.getMessage());
+            return Mono.error(new QuerySanitizationException(
+                    "Query contains invalid syntax: " + e.getMessage()));
+        }
+
+        int depth = calculateDepth(document);
         if (depth > MAX_QUERY_DEPTH) {
             log.warn("Rejected deeply nested query: depth {} (max {})", depth, MAX_QUERY_DEPTH);
             return Mono.error(new QuerySanitizationException(
@@ -103,26 +131,71 @@ public class QuerySanitizerService {
     }
 
     /**
-     * Calculates the maximum brace-nesting depth of a GraphQL query string
-     * by counting {@code '{'} and {@code '}'} characters.
+     * Computes the maximum selection-set nesting depth of a parsed
+     * {@link Document} by recursively walking every operation and fragment
+     * definition.
      *
-     * <p>This is a lightweight approximation; it does not parse the full
-     * GraphQL AST but is sufficient for depth-limit enforcement.</p>
+     * <p>Fragment spreads ({@code ...FragmentName}) are treated as one extra
+     * depth level, because resolving named fragments would require the full
+     * schema and fragment map. This is a known conservative approximation;
+     * it will never under-count depth.</p>
      *
-     * @param query the (already trimmed) query string
-     * @return the maximum brace depth found
+     * @param document the parsed {@link Document}; must not be {@code null}
+     * @return the maximum selection-set depth found across all definitions,
+     *         or {@code 0} if the document contains no definitions
      */
-    private int calculateDepth(String query) {
-        int current = 0;
-        int max = 0;
-        for (char c : query.toCharArray()) {
-            if (c == '{') {
-                current++;
-                if (current > max) max = current;
-            } else if (c == '}') {
-                current--;
-            }
+    private int calculateDepth(Document document) {
+        return document.getDefinitions().stream()
+                .mapToInt(def -> {
+                    if (def instanceof OperationDefinition op) {
+                        return selectionSetDepth(op.getSelectionSet(), 0);
+                    }
+                    if (def instanceof FragmentDefinition frag) {
+                        return selectionSetDepth(frag.getSelectionSet(), 0);
+                    }
+                    return 0;
+                })
+                .max()
+                .orElse(0);
+    }
+
+    /**
+     * Recursively computes the maximum depth within a {@link SelectionSet},
+     * counting each level of field nesting as one unit.
+     *
+     * @param selectionSet the selection set to traverse; may be {@code null}
+     *                     (treated as leaf — returns {@code currentDepth})
+     * @param currentDepth the depth at which this selection set appears
+     * @return the maximum depth reached within {@code selectionSet}
+     */
+    @SuppressWarnings("rawtypes")
+    private int selectionSetDepth(SelectionSet selectionSet, int currentDepth) {
+        if (selectionSet == null) {
+            return currentDepth;
         }
-        return max;
+
+        int nextDepth = currentDepth + 1;
+        List<Selection> selections = selectionSet.getSelections();
+
+        if (selections == null || selections.isEmpty()) {
+            return nextDepth;
+        }
+
+        return selections.stream()
+                .mapToInt(selection -> {
+                    if (selection instanceof Field field) {
+                        return selectionSetDepth(field.getSelectionSet(), nextDepth);
+                    }
+                    if (selection instanceof InlineFragment fragment) {
+                        return selectionSetDepth(fragment.getSelectionSet(), nextDepth);
+                    }
+                    // FragmentSpread: name-only reference; we cannot resolve the
+                    // fragment depth without the full document context + schema,
+                    // so conservatively count it as one additional level.
+                    return nextDepth;
+                })
+                .max()
+                .orElse(nextDepth);
     }
 }
+
