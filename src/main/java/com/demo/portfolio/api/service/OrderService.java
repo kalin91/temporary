@@ -19,7 +19,19 @@ import reactor.core.scheduler.Schedulers;
 import java.time.OffsetDateTime;
 
 /**
- * Service for managing orders.
+ * Service class for managing order operations.
+ * 
+ * This service provides CRUD operations and query functionality for orders, including:
+ * - Retrieving orders with optional filtering by customer ID and/or status
+ * - Creating new orders with customer validation
+ * - Updating existing orders
+ * - Deleting orders
+ * 
+ * All operations are performed asynchronously using Project Reactor's Mono and are
+ * executed on bounded elastic schedulers to avoid blocking the main thread.
+ * 
+ * @author Your Name
+ * @version 1.0
  */
 @Service
 @RequiredArgsConstructor
@@ -43,14 +55,12 @@ public class OrderService {
             boolean hasCustomerId = customerId != null;
             boolean hasStatus = status != null;
             PageRequest pageRequest = PageRequest.of(page, size);
-            if(hasCustomerId && hasStatus) 
+            if (hasCustomerId && hasStatus)
                 return orderRepository.findByCustomerIdAndStatus(customerId, status, pageRequest);
-            else if (hasStatus) 
+            else if (hasStatus)
                 return orderRepository.findByStatus(status, pageRequest);
-            
-            else if (hasCustomerId) 
+            else if (hasCustomerId)
                 return orderRepository.findByCustomerId(customerId, pageRequest);
-            
             return orderRepository.findAll(pageRequest);
         }).subscribeOn(Schedulers.boundedElastic());
     }
@@ -64,8 +74,8 @@ public class OrderService {
     @Transactional(readOnly = true)
     public Mono<OrderEntity> getOrder(Long id) {
         return Mono.fromCallable(() -> orderRepository.findById(id)
-                        .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + id)))
-                .subscribeOn(Schedulers.boundedElastic());
+            .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + id)))
+            .subscribeOn(Schedulers.boundedElastic());
     }
 
     /**
@@ -79,14 +89,14 @@ public class OrderService {
         return Mono.fromCallable(() -> {
             Long customerId = Long.parseLong(input.getCustomerId());
             CustomerEntity customer = customerRepository.findById(customerId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Customer not found with id: " + customerId));
+                .orElseThrow(() -> new ResourceNotFoundException("Customer not found with id: " + customerId));
 
             OrderEntity entity = OrderEntity.builder()
-                    .customer(customer)
-                    .orderDate(OffsetDateTime.now())
-                    .status(OrderStatus.PENDING)
-                    .totalAmount(input.getTotalAmount())
-                    .build();
+                .customer(customer)
+                .orderDate(OffsetDateTime.now())
+                .status(OrderStatus.PENDING)
+                .totalAmount(input.getTotalAmount())
+                .build();
             return orderRepository.save(entity);
         }).subscribeOn(Schedulers.boundedElastic());
     }
@@ -102,15 +112,11 @@ public class OrderService {
     public Mono<OrderEntity> updateOrder(Long id, UpdateOrderInput input) {
         return Mono.fromCallable(() -> {
             OrderEntity entity = orderRepository.findById(id)
-                    .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + id));
-            
-            if (input.getStatus() != null) {
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + id));
+            if (input.getStatus() != null)
                 entity.setStatus(OrderStatus.valueOf(input.getStatus().name()));
-            }
-            if (input.getTotalAmount() != null) {
+            if (input.getTotalAmount() != null)
                 entity.setTotalAmount(input.getTotalAmount());
-            }
-            
             return orderRepository.save(entity);
         }).subscribeOn(Schedulers.boundedElastic());
     }
@@ -124,9 +130,8 @@ public class OrderService {
     @Transactional
     public Mono<Boolean> deleteOrder(Long id) {
         return Mono.fromCallable(() -> {
-            if (!orderRepository.existsById(id)) {
+            if (!orderRepository.existsById(id))
                 throw new ResourceNotFoundException("Order not found with id: " + id);
-            }
             orderRepository.deleteById(id);
             return true;
         }).subscribeOn(Schedulers.boundedElastic());
