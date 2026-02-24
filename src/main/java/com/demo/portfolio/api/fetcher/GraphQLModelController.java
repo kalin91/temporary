@@ -5,10 +5,11 @@ import com.demo.portfolio.api.exception.GraphQLErrorBuilder;
 import com.demo.portfolio.api.exception.QuerySanitizationException;
 import com.demo.portfolio.api.service.QuerySanitizerService;
 import com.netflix.graphql.dgs.reactive.DgsReactiveQueryExecutor;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -62,9 +63,8 @@ import java.util.Map;
  */
 @RestController
 @RequiredArgsConstructor
+@Slf4j
 public class GraphQLModelController {
-
-    private static final Logger log = LoggerFactory.getLogger(GraphQLModelController.class);
 
     private final DgsReactiveQueryExecutor dgsReactiveQueryExecutor;
     private final QuerySanitizerService sanitizerService;

@@ -2,8 +2,9 @@ package com.demo.portfolio.api.service;
 
 import com.demo.portfolio.api.dto.GraphQLRequest;
 import com.demo.portfolio.api.exception.QuerySanitizationException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
@@ -25,10 +26,9 @@ import java.util.regex.Pattern;
  * <p>All violations result in a {@link QuerySanitizationException} wrapped in
  * a failed {@link Mono} so the reactive pipeline propagates errors cleanly.
  */
+@Slf4j
 @Service
 public class QuerySanitizerService {
-
-    private static final Logger log = LoggerFactory.getLogger(QuerySanitizerService.class);
 
     /** Maximum allowed character length for a raw query string. */
     private static final int MAX_QUERY_LENGTH = 10_000;

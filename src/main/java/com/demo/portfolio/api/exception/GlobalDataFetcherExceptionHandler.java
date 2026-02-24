@@ -5,8 +5,8 @@ import com.netflix.graphql.types.errors.TypedGraphQLError;
 import graphql.execution.DataFetcherExceptionHandler;
 import graphql.execution.DataFetcherExceptionHandlerParameters;
 import graphql.execution.DataFetcherExceptionHandlerResult;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
@@ -38,10 +38,9 @@ import java.util.concurrent.CompletableFuture;
  *
  * @see GraphQLErrorBuilder
  */
+@Slf4j
 @Component
 public class GlobalDataFetcherExceptionHandler implements DataFetcherExceptionHandler {
-
-    private static final Logger log = LoggerFactory.getLogger(GlobalDataFetcherExceptionHandler.class);
 
     private final DefaultDataFetcherExceptionHandler defaultHandler = new DefaultDataFetcherExceptionHandler();
 
