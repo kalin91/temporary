@@ -1,5 +1,6 @@
 package com.demo.portfolio.api.fetcher;
 
+import com.demo.portfolio.api.generated.DgsConstants;
 import com.demo.portfolio.api.generated.types.*;
 import com.demo.portfolio.api.mapper.CustomerMapper;
 import com.demo.portfolio.api.mapper.OrderMapper;
@@ -7,6 +8,7 @@ import com.demo.portfolio.api.service.CustomerService;
 import com.demo.portfolio.api.service.OrderService;
 import com.netflix.graphql.dgs.DgsComponent;
 import com.netflix.graphql.dgs.DgsData;
+import com.netflix.graphql.dgs.DgsDataFetchingEnvironment;
 import com.netflix.graphql.dgs.DgsMutation;
 import com.netflix.graphql.dgs.DgsQuery;
 import com.netflix.graphql.dgs.InputArgument;
@@ -14,7 +16,7 @@ import lombok.RequiredArgsConstructor;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Objects;
 
 /**
  * GraphQL Data Fetcher for Order operations.
@@ -41,7 +43,7 @@ public class OrderDataFetcher {
                                     .cursor(String.valueOf(entity.getId()))
                                     .node(orderMapper.toDto(entity))
                                     .build())
-                            .collect(Collectors.toList());
+                            .toList();
                     
                     PageInfo pageInfo = PageInfo.newBuilder()
                             .hasNextPage(orderPage.hasNext())
@@ -78,9 +80,9 @@ public class OrderDataFetcher {
         return orderService.deleteOrder(Long.parseLong(id));
     }
 
-    @DgsData(parentType = "Order", field = "customer")
-    public Mono<Customer> customerForOrder(com.netflix.graphql.dgs.DgsDataFetchingEnvironment dfe) {
-        Order order = dfe.getSource();
+    @DgsData(parentType = DgsConstants.ORDER.TYPE_NAME, field = DgsConstants.ORDER.Customer)
+    public Mono<Customer> customerForOrder(DgsDataFetchingEnvironment dfe) {
+        Order order = Objects.requireNonNull(dfe.getSource(), "Source for customerForOrder cannot be null");
         return orderService.getOrder(Long.parseLong(order.getId()))
                 .flatMap(orderEntity -> customerService.getCustomer(orderEntity.getCustomer().getId()))
                 .map(customerMapper::toDto);

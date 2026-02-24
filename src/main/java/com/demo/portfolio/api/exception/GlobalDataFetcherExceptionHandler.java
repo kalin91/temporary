@@ -1,6 +1,5 @@
 package com.demo.portfolio.api.exception;
 
-import com.netflix.graphql.dgs.exceptions.DefaultDataFetcherExceptionHandler;
 import com.netflix.graphql.types.errors.TypedGraphQLError;
 import graphql.execution.DataFetcherExceptionHandler;
 import graphql.execution.DataFetcherExceptionHandlerParameters;
@@ -41,8 +40,6 @@ import java.util.concurrent.CompletableFuture;
 @Slf4j
 @Component
 public class GlobalDataFetcherExceptionHandler implements DataFetcherExceptionHandler {
-
-    private final DefaultDataFetcherExceptionHandler defaultHandler = new DefaultDataFetcherExceptionHandler();
 
     /**
      * Handles an exception raised by a DGS data fetcher and returns a

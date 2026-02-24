@@ -7,6 +7,7 @@ import com.demo.portfolio.api.service.CustomerService;
 import com.demo.portfolio.api.service.OrderService;
 import com.netflix.graphql.dgs.DgsComponent;
 import com.netflix.graphql.dgs.DgsData;
+import com.netflix.graphql.dgs.DgsDataFetchingEnvironment;
 import com.netflix.graphql.dgs.DgsMutation;
 import com.netflix.graphql.dgs.DgsQuery;
 import com.netflix.graphql.dgs.InputArgument;
@@ -14,7 +15,7 @@ import lombok.RequiredArgsConstructor;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Objects;
 
 /**
  * GraphQL Data Fetcher for Customer operations.
@@ -40,7 +41,7 @@ public class CustomerDataFetcher {
                                     .cursor(String.valueOf(entity.getId()))
                                     .node(customerMapper.toDto(entity))
                                     .build())
-                            .collect(Collectors.toList());
+                            .toList();
                     
                     PageInfo pageInfo = PageInfo.newBuilder()
                             .hasNextPage(customerPage.hasNext())
@@ -78,11 +79,11 @@ public class CustomerDataFetcher {
     }
 
     @DgsData(parentType = "Customer", field = "orders")
-    public Mono<List<Order>> ordersForCustomer(com.netflix.graphql.dgs.DgsDataFetchingEnvironment dfe) {
-        Customer customer = dfe.getSource();
+    public Mono<List<Order>> ordersForCustomer(DgsDataFetchingEnvironment dfe) {
+        Customer customer = Objects.requireNonNull(dfe.getSource(), "Source for ordersForCustomer cannot be null");
         return orderService.getOrders(Long.parseLong(customer.getId()), 0, 100)
                 .map(orderPage -> orderPage.getContent().stream()
                         .map(orderMapper::toDto)
-                        .collect(Collectors.toList()));
+                        .toList());
     }
 }
