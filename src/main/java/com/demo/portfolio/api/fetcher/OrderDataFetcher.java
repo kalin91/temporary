@@ -1,0 +1,88 @@
+package com.demo.portfolio.api.fetcher;
+
+import com.demo.portfolio.api.generated.types.*;
+import com.demo.portfolio.api.mapper.CustomerMapper;
+import com.demo.portfolio.api.mapper.OrderMapper;
+import com.demo.portfolio.api.service.CustomerService;
+import com.demo.portfolio.api.service.OrderService;
+import com.netflix.graphql.dgs.DgsComponent;
+import com.netflix.graphql.dgs.DgsData;
+import com.netflix.graphql.dgs.DgsMutation;
+import com.netflix.graphql.dgs.DgsQuery;
+import com.netflix.graphql.dgs.InputArgument;
+import lombok.RequiredArgsConstructor;
+import reactor.core.publisher.Mono;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+/**
+ * GraphQL Data Fetcher for Order operations.
+ */
+@DgsComponent
+@RequiredArgsConstructor
+public class OrderDataFetcher {
+
+    private final OrderService orderService;
+    private final CustomerService customerService;
+    private final OrderMapper orderMapper;
+    private final CustomerMapper customerMapper;
+
+    @DgsQuery
+    public Mono<OrderConnection> orders(@InputArgument String customerId, @InputArgument Integer page, @InputArgument Integer size) {
+        int p = page != null ? page : 0;
+        int s = size != null ? size : 10;
+        Long cId = customerId != null ? Long.parseLong(customerId) : null;
+        
+        return orderService.getOrders(cId, p, s)
+                .map(orderPage -> {
+                    List<OrderEdge> edges = orderPage.getContent().stream()
+                            .map(entity -> OrderEdge.newBuilder()
+                                    .cursor(String.valueOf(entity.getId()))
+                                    .node(orderMapper.toDto(entity))
+                                    .build())
+                            .collect(Collectors.toList());
+                    
+                    PageInfo pageInfo = PageInfo.newBuilder()
+                            .hasNextPage(orderPage.hasNext())
+                            .hasPreviousPage(orderPage.hasPrevious())
+                            .build();
+                    
+                    return OrderConnection.newBuilder()
+                            .edges(edges)
+                            .pageInfo(pageInfo)
+                            .build();
+                });
+    }
+
+    @DgsQuery
+    public Mono<Order> order(@InputArgument String id) {
+        return orderService.getOrder(Long.parseLong(id))
+                .map(orderMapper::toDto);
+    }
+
+    @DgsMutation
+    public Mono<Order> createOrder(@InputArgument CreateOrderInput input) {
+        return orderService.createOrder(input)
+                .map(orderMapper::toDto);
+    }
+
+    @DgsMutation
+    public Mono<Order> updateOrder(@InputArgument String id, @InputArgument UpdateOrderInput input) {
+        return orderService.updateOrder(Long.parseLong(id), input)
+                .map(orderMapper::toDto);
+    }
+
+    @DgsMutation
+    public Mono<Boolean> deleteOrder(@InputArgument String id) {
+        return orderService.deleteOrder(Long.parseLong(id));
+    }
+
+    @DgsData(parentType = "Order", field = "customer")
+    public Mono<Customer> customerForOrder(com.netflix.graphql.dgs.DgsDataFetchingEnvironment dfe) {
+        Order order = dfe.getSource();
+        return orderService.getOrder(Long.parseLong(order.getId()))
+                .flatMap(orderEntity -> customerService.getCustomer(orderEntity.getCustomer().getId()))
+                .map(customerMapper::toDto);
+    }
+}

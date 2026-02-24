@@ -1,0 +1,28 @@
+spring:
+  application:
+    name: backend-portfolio-api
+  datasource:
+    url: jdbc:h2:mem:portfolio;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driverClassName: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.demo.portfolio.api: DEBUG
+    org.springframework.web: INFO
+    org.hibernate.SQL: DEBUG

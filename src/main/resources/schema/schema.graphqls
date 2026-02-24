@@ -1,0 +1,89 @@
+type Query {
+    customers(page: Int = 0, size: Int = 10): CustomerConnection
+    customer(id: ID!): Customer
+    orders(customerId: ID, page: Int = 0, size: Int = 10): OrderConnection
+    order(id: ID!): Order
+}
+
+type Mutation {
+    createCustomer(input: CreateCustomerInput!): Customer!
+    updateCustomer(id: ID!, input: UpdateCustomerInput!): Customer!
+    deleteCustomer(id: ID!): Boolean!
+
+    createOrder(input: CreateOrderInput!): Order!
+    updateOrder(id: ID!, input: UpdateOrderInput!): Order!
+    deleteOrder(id: ID!): Boolean!
+}
+
+type Customer {
+    id: ID!
+    firstName: String!
+    lastName: String!
+    email: String!
+    orders: [Order!]!
+}
+
+type Order {
+    id: ID!
+    orderDate: String!
+    status: OrderStatus!
+    totalAmount: Float!
+    customer: Customer!
+}
+
+enum OrderStatus {
+    PENDING
+    PROCESSING
+    SHIPPED
+    DELIVERED
+    CANCELLED
+}
+
+input CreateCustomerInput {
+    firstName: String!
+    lastName: String!
+    email: String!
+}
+
+input UpdateCustomerInput {
+    firstName: String
+    lastName: String
+    email: String
+}
+
+input CreateOrderInput {
+    customerId: ID!
+    totalAmount: Float!
+}
+
+input UpdateOrderInput {
+    status: OrderStatus
+    totalAmount: Float
+}
+
+type CustomerConnection {
+    edges: [CustomerEdge!]!
+    pageInfo: PageInfo!
+}
+
+type CustomerEdge {
+    cursor: String!
+    node: Customer!
+}
+
+type OrderConnection {
+    edges: [OrderEdge!]!
+    pageInfo: PageInfo!
+}
+
+type OrderEdge {
+    cursor: String!
+    node: Order!
+}
+
+type PageInfo {
+    hasNextPage: Boolean!
+    hasPreviousPage: Boolean!
+    startCursor: String
+    endCursor: String
+}
