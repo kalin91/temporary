@@ -28,7 +28,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
     implementation "com.netflix.graphql.dgs:graphql-dgs-reactive:${netflixDgsVersion}"
-    runtimeOnly "com.netflix.graphql.dgs:graphql-dgs-spring-graphql-starter:${netflixDgsVersion}"
+    implementation "com.netflix.graphql.dgs:graphql-dgs-spring-graphql-starter:${netflixDgsVersion}"
     implementation "com.netflix.graphql.dgs:graphql-dgs-extended-scalars:${netflixDgsVersion}"
     implementation "com.netflix.graphql.dgs:graphql-dgs:${netflixDgsVersion}"
     compileOnly 'org.projectlombok:lombok'

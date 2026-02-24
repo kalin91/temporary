@@ -3,6 +3,7 @@ package com.demo.portfolio.api.fetcher;
 import com.demo.portfolio.api.dto.GraphQLRequest;
 import com.demo.portfolio.api.exception.GraphQLErrorBuilder;
 import com.demo.portfolio.api.exception.QuerySanitizationException;
+import com.demo.portfolio.api.service.GraphQLErrorEnhancerService;
 import com.demo.portfolio.api.service.QuerySanitizerService;
 import com.netflix.graphql.dgs.reactive.DgsReactiveQueryExecutor;
 
@@ -68,6 +69,7 @@ public class GraphQLModelController {
 
     private final DgsReactiveQueryExecutor dgsReactiveQueryExecutor;
     private final QuerySanitizerService sanitizerService;
+    private final GraphQLErrorEnhancerService errorEnhancerService;
 
     /**
      * Executes a GraphQL query after sanitization.
@@ -95,7 +97,8 @@ public class GraphQLModelController {
                 sanitized.getVariables()))
             .map(result -> {
                 log.debug("GraphQL execution completed, errors={}", result.getErrors().size());
-                return ResponseEntity.ok(result.toSpecification());
+                Map<String, Object> spec = errorEnhancerService.enhance(result.toSpecification());
+                return ResponseEntity.ok(spec);
             })
             .onErrorResume(QuerySanitizationException.class, ex -> {
                 log.warn("Query sanitization failed: {}", ex.getMessage());
