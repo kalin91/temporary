@@ -32,7 +32,7 @@ public class CustomerService {
     @Transactional(readOnly = true)
     public Mono<Page<CustomerEntity>> getCustomers(int page, int size) {
         return Mono.fromCallable(() -> customerRepository.findAll(PageRequest.of(page, size)))
-                .subscribeOn(Schedulers.boundedElastic());
+            .subscribeOn(Schedulers.boundedElastic());
     }
 
     /**
@@ -44,8 +44,8 @@ public class CustomerService {
     @Transactional(readOnly = true)
     public Mono<CustomerEntity> getCustomer(Long id) {
         return Mono.fromCallable(() -> customerRepository.findById(id)
-                        .orElseThrow(() -> new ResourceNotFoundException("Customer not found with id: " + id)))
-                .subscribeOn(Schedulers.boundedElastic());
+            .orElseThrow(() -> new ResourceNotFoundException("Customer not found with id: " + id)))
+            .subscribeOn(Schedulers.boundedElastic());
     }
 
     /**
@@ -58,10 +58,10 @@ public class CustomerService {
     public Mono<CustomerEntity> createCustomer(CreateCustomerInput input) {
         return Mono.fromCallable(() -> {
             CustomerEntity entity = CustomerEntity.builder()
-                    .firstName(input.getFirstName())
-                    .lastName(input.getLastName())
-                    .email(input.getEmail())
-                    .build();
+                .firstName(input.getFirstName())
+                .lastName(input.getLastName())
+                .email(input.getEmail())
+                .build();
             return customerRepository.save(entity);
         }).subscribeOn(Schedulers.boundedElastic());
     }
@@ -77,12 +77,15 @@ public class CustomerService {
     public Mono<CustomerEntity> updateCustomer(Long id, UpdateCustomerInput input) {
         return Mono.fromCallable(() -> {
             CustomerEntity entity = customerRepository.findById(id)
-                    .orElseThrow(() -> new ResourceNotFoundException("Customer not found with id: " + id));
-            
-            if (input.getFirstName() != null) entity.setFirstName(input.getFirstName());
-            if (input.getLastName() != null) entity.setLastName(input.getLastName());
-            if (input.getEmail() != null) entity.setEmail(input.getEmail());
-            
+                .orElseThrow(() -> new ResourceNotFoundException("Customer not found with id: " + id));
+
+            if (input.getFirstName() != null)
+                entity.setFirstName(input.getFirstName());
+            if (input.getLastName() != null)
+                entity.setLastName(input.getLastName());
+            if (input.getEmail() != null)
+                entity.setEmail(input.getEmail());
+
             return customerRepository.save(entity);
         }).subscribeOn(Schedulers.boundedElastic());
     }
