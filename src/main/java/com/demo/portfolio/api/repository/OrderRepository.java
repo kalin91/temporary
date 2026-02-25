@@ -5,7 +5,11 @@ import com.demo.portfolio.api.domain.OrderStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
+
+import java.util.Collection;
+import java.util.List;
 
 /**
  * Repository interface for performing CRUD operations and custom queries on {@link com.demo.portfolio.api.domain.OrderEntity}.
@@ -87,4 +91,25 @@ public interface OrderRepository extends JpaRepository<OrderEntity, Long> {
     * @return page of orders
     */
    Page<OrderEntity> findByCustomerIdAndStatus(Long customerId, OrderStatus status, Pageable pageable);
+
+    /**
+     * Batch-fetch all orders belonging to a set of customer IDs in a single query.
+     * Used by the DataLoader to eliminate N+1 queries when resolving {@code Customer.orders}.
+     *
+     * @param customerIds the set of customer IDs to query for
+     * @return flat list of all matching orders (unsorted)
+     */
+    List<OrderEntity> findByCustomerIdIn(Collection<Long> customerIds);
+
+    /**
+     * Finds all orders for a collection of customers with optional status filtering.
+     * 
+     * @param customerIds Collection of customer IDs to filter orders by. Must not be null or empty.
+     * @param status The order status to filter by. If null, all statuses are included.
+     * @param pageable The pagination and sorting information. Must not be null.
+     * @return A list of OrderEntity objects matching the specified criteria, or an empty list if no matches found.
+     */
+    @Query("SELECT o FROM OrderEntity o WHERE o.customer.id IN :customerIds AND (:status IS NULL OR o.status = :status)")
+    List<OrderEntity> findByCustomerIdInAndOptionalStatus(Collection<Long> customerIds, OrderStatus status, Pageable pageable);
+
 }

@@ -5,7 +5,12 @@ import com.demo.portfolio.api.exception.ResourceNotFoundException;
 import com.demo.portfolio.api.generated.types.CreateCustomerInput;
 import com.demo.portfolio.api.generated.types.UpdateCustomerInput;
 import com.demo.portfolio.api.repository.CustomerRepository;
+
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+
+import java.util.Objects;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -42,7 +47,7 @@ public class CustomerService {
      * @return a Mono emitting the customer
      */
     @Transactional(readOnly = true)
-    public Mono<CustomerEntity> getCustomer(Long id) {
+    public Mono<CustomerEntity> getCustomer(@NonNull Long id) {
         return Mono.fromCallable(() -> customerRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Customer not found with id: " + id)))
             .subscribeOn(Schedulers.boundedElastic());
@@ -62,7 +67,7 @@ public class CustomerService {
                 .lastName(input.getLastName())
                 .email(input.getEmail())
                 .build();
-            return customerRepository.save(entity);
+            return customerRepository.save(Objects.requireNonNull(entity));
         }).subscribeOn(Schedulers.boundedElastic());
     }
 
@@ -74,7 +79,7 @@ public class CustomerService {
      * @return a Mono emitting the updated customer
      */
     @Transactional
-    public Mono<CustomerEntity> updateCustomer(Long id, UpdateCustomerInput input) {
+    public Mono<CustomerEntity> updateCustomer(@NonNull Long id, UpdateCustomerInput input) {
         return Mono.fromCallable(() -> {
             CustomerEntity entity = customerRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Customer not found with id: " + id));
@@ -86,7 +91,7 @@ public class CustomerService {
             if (input.getEmail() != null)
                 entity.setEmail(input.getEmail());
 
-            return customerRepository.save(entity);
+            return customerRepository.save(Objects.requireNonNull(entity));
         }).subscribeOn(Schedulers.boundedElastic());
     }
 
@@ -97,7 +102,7 @@ public class CustomerService {
      * @return a Mono emitting true if deleted
      */
     @Transactional
-    public Mono<Boolean> deleteCustomer(Long id) {
+    public Mono<Boolean> deleteCustomer(@NonNull Long id) {
         return Mono.fromCallable(() -> {
             if (!customerRepository.existsById(id)) {
                 throw new ResourceNotFoundException("Customer not found with id: " + id);

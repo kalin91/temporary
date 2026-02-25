@@ -9,6 +9,7 @@ import com.demo.portfolio.api.generated.types.UpdateOrderInput;
 import com.demo.portfolio.api.repository.CustomerRepository;
 import com.demo.portfolio.api.repository.OrderRepository;
 
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -20,6 +21,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 import java.time.OffsetDateTime;
+import java.util.Objects;
 
 /**
  * Service class for managing order operations.
@@ -75,7 +77,7 @@ public class OrderService {
      * @return a Mono emitting the order
      */
     @Transactional(readOnly = true)
-    public Mono<OrderEntity> getOrder(Long id) {
+    public Mono<OrderEntity> getOrder(@NonNull Long id) {
         return Mono.fromCallable(() -> orderRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + id)))
             .subscribeOn(Schedulers.boundedElastic());
@@ -100,7 +102,7 @@ public class OrderService {
                 .status(OrderStatus.PENDING)
                 .totalAmount(input.getTotalAmount())
                 .build();
-            return orderRepository.save(entity);
+            return orderRepository.save(Objects.requireNonNull(entity));
         }).subscribeOn(Schedulers.boundedElastic());
     }
 
@@ -112,7 +114,7 @@ public class OrderService {
      * @return a Mono emitting the updated order
      */
     @Transactional
-    public Mono<OrderEntity> updateOrder(Long id, UpdateOrderInput input) {
+    public Mono<OrderEntity> updateOrder(@NonNull Long id, UpdateOrderInput input) {
         return Mono.fromCallable(() -> {
             OrderEntity entity = orderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + id));
@@ -120,7 +122,7 @@ public class OrderService {
                 entity.setStatus(OrderStatus.valueOf(input.getStatus().name()));
             if (input.getTotalAmount() != null)
                 entity.setTotalAmount(input.getTotalAmount());
-            return orderRepository.save(entity);
+            return orderRepository.save(Objects.requireNonNull(entity));
         }).subscribeOn(Schedulers.boundedElastic());
     }
 
@@ -131,7 +133,7 @@ public class OrderService {
      * @return a Mono emitting true if deleted
      */
     @Transactional
-    public Mono<Boolean> deleteOrder(Long id) {
+    public Mono<Boolean> deleteOrder(@NonNull Long id) {
         return Mono.fromCallable(() -> {
             if (!orderRepository.existsById(id))
                 throw new ResourceNotFoundException("Order not found with id: " + id);

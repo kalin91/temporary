@@ -3,6 +3,9 @@ package com.demo.portfolio.api.config;
 import com.demo.portfolio.api.dto.GraphQLRequest;
 import com.demo.portfolio.api.service.QuerySanitizerService;
 import lombok.RequiredArgsConstructor;
+
+import java.util.Objects;
+
 import org.springframework.graphql.server.WebGraphQlInterceptor;
 import org.springframework.graphql.server.WebGraphQlRequest;
 import org.springframework.graphql.server.WebGraphQlResponse;
@@ -39,25 +42,24 @@ public class SanitizingInterceptor implements WebGraphQlInterceptor {
      * to the next handler in the chain if validation passes.
      *
      * @param request the incoming {@link WebGraphQlRequest}
-     * @param chain   the interceptor chain to delegate execution to
+     * @param chain the interceptor chain to delegate execution to
      * @return a {@link Mono} emitting the {@link WebGraphQlResponse}, or a
      *         failed {@code Mono} if sanitization rejects the query
      */
     @Override
     @NonNull
-    public Mono<WebGraphQlResponse> intercept(@NonNull WebGraphQlRequest request, @NonNull Chain chain) {
+    public Mono<WebGraphQlResponse> intercept(@NonNull @lombok.NonNull WebGraphQlRequest request, @NonNull @lombok.NonNull Chain chain) {
         // Map WebGraphQlRequest to our internal DTO for sanitization
         GraphQLRequest dto = GraphQLRequest.builder()
-                .query(request.getDocument())
-                .operationName(request.getOperationName())
-                .variables(request.getVariables())
-                .build();
+            .query(request.getDocument())
+            .operationName(request.getOperationName())
+            .variables(request.getVariables())
+            .build();
 
         // Perform sanitization check
-        return sanitizerService.sanitize(dto)
-                .flatMap(sanitizedDto -> 
-                    // If sanitization passes, proceed with the original request
-                    chain.next(request)
-                );
+        return Objects.requireNonNull(sanitizerService.sanitize(dto)
+            .flatMap(sanitizedDto ->
+            // If sanitization passes, proceed with the original request
+            chain.next(request)));
     }
 }

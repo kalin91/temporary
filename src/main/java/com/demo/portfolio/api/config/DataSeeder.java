@@ -18,6 +18,7 @@ import java.io.InputStream;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -94,7 +95,7 @@ public class DataSeeder implements CommandLineRunner {
                         .build())
                     .collect(Collectors.toList());
 
-                customerRepository.saveAll(customers);
+                customerRepository.saveAll(Objects.requireNonNull(customers));
 
                 // Map email -> CustomerEntity for linking orders
                 Map<String, CustomerEntity> customerMap = customers.stream()
@@ -123,7 +124,7 @@ public class DataSeeder implements CommandLineRunner {
                     .filter(java.util.Objects::nonNull)
                     .collect(Collectors.toList());
 
-                orderRepository.saveAll(orders);
+                orderRepository.saveAll(Objects.requireNonNull(orders));
                 log.info("Database seeding completed.");
             } catch (Exception e) {
                 log.error("Failed to seed database", e);

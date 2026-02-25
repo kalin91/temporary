@@ -4,6 +4,9 @@ import com.demo.portfolio.api.service.GraphQLErrorEnhancerService;
 import graphql.ExecutionResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.Objects;
+
 import org.springframework.graphql.server.WebGraphQlInterceptor;
 import org.springframework.graphql.server.WebGraphQlRequest;
 import org.springframework.graphql.server.WebGraphQlResponse;
@@ -68,7 +71,7 @@ public class ErrorEnhancerInterceptor implements WebGraphQlInterceptor {
     @NonNull
     public Mono<WebGraphQlResponse> intercept(@NonNull WebGraphQlRequest request,
                                               @NonNull Chain chain) {
-        return chain.next(request)
+        return Objects.requireNonNull(chain.next(request)
                 .map(response -> {
                     if (!response.getErrors().isEmpty()) {
                         log.debug("Response contains {} error(s); applying enum error enhancement",
@@ -79,6 +82,6 @@ public class ErrorEnhancerInterceptor implements WebGraphQlInterceptor {
                                 builder.errors(enhanced.getErrors()));
                     }
                     return response;
-                });
+                }));
     }
 }
