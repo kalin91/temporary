@@ -66,4 +66,7 @@ sourceSets {
 test {
     // Obligatorio para que Gradle reconozca los tests de JUnit 5
     useJUnitPlatform()
+    testLogging {
+        showStandardStreams = true
+    }
 }

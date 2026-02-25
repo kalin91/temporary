@@ -1,0 +1,14 @@
+mutation UpdateOrder($id: ID!, $input: UpdateOrderInput!) {
+  updateOrder(id: $id, input: $input) {
+    id
+    orderDate
+    status
+    totalAmount
+    customer {
+      id
+      firstName
+      lastName
+      email
+    }
+  }
+}

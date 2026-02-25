@@ -8,6 +8,7 @@ function fn() {
 
   const config = {
     baseUrl: 'http://localhost:8080',
+    basePath: '/model',
     myToken: 'default-token'
   };
 

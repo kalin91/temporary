@@ -17,7 +17,7 @@ class ITKarateRunner {
 
     @Test
     void testParallel() {
-        Results results = Runner.path("classpath:demo")
+        Results results = Runner.path("classpath:")
             .systemProperty("demo.server.port", port + "")
             .parallel(5);
         assertEquals(0, results.getFailCount(), results.getErrorMessages());
