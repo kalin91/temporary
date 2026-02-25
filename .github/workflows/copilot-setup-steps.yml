@@ -1,0 +1,27 @@
+name: Copilot Setup Steps
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+
+jobs:
+  copilot-setup-steps: # This name is mandatory
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin' # Or whichever you prefer
+          cache: 'gradle'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      # Optional: Helps copilot to check that everything is set up correctly and can speed up the first build
+      - name: Warm up Gradle
+        run: ./gradlew --no-daemon --quiet --build-cache --refresh-dependencies --parallel --continue build || true
