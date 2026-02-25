@@ -1,0 +1,14 @@
+query GetOrder($id: ID!) {
+  order(id: $id) {
+    id
+    orderDate
+    status
+    totalAmount
+    customer {
+      id
+      firstName
+      lastName
+      email
+    }
+  }
+}

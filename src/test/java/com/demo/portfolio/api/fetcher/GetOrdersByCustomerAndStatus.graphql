@@ -1,0 +1,18 @@
+query GetOrdersByCustomerAndStatus($customerId: ID, $status: OrderStatus, $page: Int, $size: Int) {
+  orders(customerId: $customerId, status: $status, page: $page, size: $size) {
+    content {
+      id
+      orderDate
+      status
+      totalAmount
+      customer {
+        id
+        firstName
+        lastName
+      }
+    }
+    totalPages
+    totalElements
+    number
+  }
+}
