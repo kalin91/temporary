@@ -87,7 +87,7 @@ Feature: Order Data Fetcher
 
   Scenario: Delete Order
     Given def query = read('DeleteOrder.graphql')
-    And def variables = { "id": "42" }
+    And def variables = { "id": "39" }
     And request { query: '#(query)', variables: '#(variables)' }
     When method post
     Then status 200

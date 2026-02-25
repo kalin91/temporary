@@ -31,7 +31,7 @@ class DataSeederTest {
     void runSkipsWhenCustomersExist() {
         when(customerRepository.count()).thenReturn(1L);
 
-        dataSeeder.run();
+        dataSeeder.afterSingletonsInstantiated();
 
         verify(customerRepository, never()).saveAll(any());
         verify(orderRepository, never()).saveAll(any());
@@ -44,7 +44,7 @@ class DataSeederTest {
         when(customerRepository.saveAll(any())).thenAnswer(i -> i.<Iterable<CustomerEntity>>getArgument(0));
         when(orderRepository.saveAll(any())).thenAnswer(i -> i.<Iterable<OrderEntity>>getArgument(0));
 
-        seeder.run();
+        seeder.afterSingletonsInstantiated();
 
         verify(customerRepository).saveAll(argThat(customers -> {
             assertTrue(customers.iterator().hasNext());

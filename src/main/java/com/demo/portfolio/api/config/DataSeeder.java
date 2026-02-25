@@ -10,7 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.CommandLineRunner;
+import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
@@ -54,7 +54,7 @@ import java.util.stream.Collectors;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class DataSeeder implements CommandLineRunner {
+public class DataSeeder implements SmartInitializingSingleton {
 
     private final CustomerRepository customerRepository;
     private final OrderRepository orderRepository;
@@ -74,10 +74,12 @@ public class DataSeeder implements CommandLineRunner {
      * <li>Persist all valid orders.</li>
      * </ol>
      *
-     * @param args command line arguments passed to the application (ignored)
+     * Invoked by Spring after all singleton beans have been instantiated,
+     * guaranteeing that the data is available before the embedded server
+     * starts accepting HTTP connections.
      */
     @Override
-    public void run(String... args) {
+    public void afterSingletonsInstantiated() {
         if (customerRepository.count() == 0) {
             log.info("Seeding database with sample data...");
             try {

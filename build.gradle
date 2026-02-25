@@ -20,6 +20,7 @@ repositories {
 
 ext {
     set('netflixDgsVersion', "10.5.0")
+    testFailures = []
 }
 
 dependencies {
@@ -44,14 +45,74 @@ dependencies {
     testImplementation 'io.projectreactor:reactor-test'
     testImplementation "io.karatelabs:karate-junit5:1.5.2"
 }
-
-tasks.named('test') {
+    def totalPassed = 0
+    def totalFailed = 0
+    def totalSkipped = 0
+tasks.withType(Test).configureEach {
     useJUnitPlatform()
-    finalizedBy tasks.named('jacocoTestReport')
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
     reports {
-        html.required = true
+        html.required = false
+        junitXml.required = true
+    }
+    ignoreFailures = true
+    testLogging {
+        showStandardStreams = true
+    }
+    afterSuite { desc, result ->
+        if (desc.parent == null) {
+            totalPassed += result.successfulTestCount
+            totalFailed += result.failedTestCount
+            totalSkipped += result.skippedTestCount
+            println "Task '${name}' finished: ${result.resultType} (${result.testCount} tests, ${totalPassed} passed, ${totalFailed} failed, ${totalSkipped} skipped)"
+            
+            if (result.resultType == TestResult.ResultType.FAILURE) {
+                println "FAILURE detected in task: ${name}"
+                rootProject.ext.testFailures.add(name) // 'name' refers to the task name here
+            }
+        }
     }
 }
+
+tasks.register('karateTest', Test) {
+    group = 'verification'
+    description = 'Runs only ITKarateRunner integration test'
+    include '**/ITKarateRunner*'
+}
+
+test {
+    exclude '**/ITKarateRunner*'
+    dependsOn karateTest
+    finalizedBy tasks.named('jacocoTestReport')
+
+}
+
+
+tasks.register('mergedTestReport', TestReport) {
+    destinationDirectory = layout.buildDirectory.dir("reports/tests/merged")
+    testResults.from(test.binaryResultsDirectory, karateTest.binaryResultsDirectory)
+}
+
+tasks.register('verifyAllTests') {
+    dependsOn mergedTestReport
+
+    doLast {
+        println "\n=== Global Test Summary ==="
+        println "Total Passed: ${totalPassed}"
+        println "Total Failed: ${totalFailed}"
+        println "Total Skipped: ${totalSkipped}"
+        println "===========================\n"
+
+        if (totalFailed > 0) {
+            throw new GradleException("Tests failed in the following tasks: ${rootProject.ext.testFailures}. See merged report.")
+        } else {
+            println "All tests passed successfully."
+        }
+    }
+}
+mergedTestReport.finalizedBy verifyAllTests
+check.dependsOn mergedTestReport
 
 tasks.named('jacocoTestReport') {
     dependsOn tasks.named('test')
@@ -60,7 +121,7 @@ tasks.named('jacocoTestReport') {
     }))
     reports {
         html.required = true
-        html.outputLocation = layout.buildDirectory.dir('reports/test')
+        html.outputLocation = layout.buildDirectory.dir('reports/tests/jacoco')
         xml.required = false
         csv.required = false
     }
@@ -78,13 +139,5 @@ sourceSets {
             srcDir file('src/test/java')
             exclude '**/*.java'
         }
-    }
-}
-
-test {
-    // Obligatorio para que Gradle reconozca los tests de JUnit 5
-    useJUnitPlatform()
-    testLogging {
-        showStandardStreams = true
     }
 }

@@ -122,7 +122,7 @@ Feature: Customer Data Fetcher Tests
 
   Scenario: Delete Customer
     Given def query = read('DeleteCustomer.graphql')
-    And def variables = { "id": "17" }
+    And def variables = { "id": "12" }
     And request { query: '#(query)', variables: '#(variables)' }
     When method post
     Then status 200
