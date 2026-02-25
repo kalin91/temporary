@@ -7,15 +7,13 @@ import com.demo.portfolio.api.repository.OrderRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -43,16 +41,18 @@ class DataSeederTest {
     void runSeedsDataWhenEmpty() {
         DataSeeder seeder = new DataSeeder(customerRepository, orderRepository, new ObjectMapper());
         when(customerRepository.count()).thenReturn(0L);
-        when(customerRepository.saveAll(any())).thenAnswer(i -> i.getArgument(0));
-        when(orderRepository.saveAll(any())).thenAnswer(i -> i.getArgument(0));
+        when(customerRepository.saveAll(any())).thenAnswer(i -> i.<Iterable<CustomerEntity>>getArgument(0));
+        when(orderRepository.saveAll(any())).thenAnswer(i -> i.<Iterable<OrderEntity>>getArgument(0));
 
         seeder.run();
 
-        ArgumentCaptor<List<CustomerEntity>> customerCaptor = ArgumentCaptor.forClass(List.class);
-        ArgumentCaptor<List<OrderEntity>> orderCaptor = ArgumentCaptor.forClass(List.class);
-        verify(customerRepository).saveAll(customerCaptor.capture());
-        verify(orderRepository).saveAll(orderCaptor.capture());
-        assertFalse(customerCaptor.getValue().isEmpty());
-        assertFalse(orderCaptor.getValue().isEmpty());
+        verify(customerRepository).saveAll(argThat(customers -> {
+            assertTrue(customers.iterator().hasNext());
+            return true;
+        }));
+        verify(orderRepository).saveAll(argThat(orders -> {
+            assertTrue(orders.iterator().hasNext());
+            return true;
+        }));
     }
 }

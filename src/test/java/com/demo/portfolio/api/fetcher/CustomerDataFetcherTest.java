@@ -89,6 +89,7 @@ class CustomerDataFetcherTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
     void ordersForCustomerUsesDataLoader() {
         CustomerDataFetcher fetcher = new CustomerDataFetcher(customerService, customerMapper);
         DgsDataFetchingEnvironment dfe = mock(DgsDataFetchingEnvironment.class);
