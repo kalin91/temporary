@@ -100,9 +100,28 @@ GraphiQL (UI for testing queries) is available at `http://localhost:8080/graphiq
 
 ### Running Tests
 
+The project employs a comprehensive testing strategy combining unit and integration tests.
+
+#### **1. Unit Testing (JUnit 5 & Mockito)**
+
+- **Scope**: Internal business logic & service layer.
+- **Command**: `./gradlew test` (skips Karate tests)
+
+#### **2. Integration Testing (Karate)**
+
+- **Scope**: End-to-end API testing (GraphQL queries, H2 database, Schema validation).
+- **Features**: Parallel execution, full request/response logging, schema-first validation.
+- **Command**: `./gradlew karateTest`
+
+#### **3. Full Suite & Reporting**
+
+Run both suites and generate a combined HTML report:
+
 ```bash
-./gradlew test
+./gradlew check
 ```
+
+- **Report Location**: `build/reports/tests/merged/index.html`
 
 ### Docker
 
