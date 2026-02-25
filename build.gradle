@@ -55,6 +55,9 @@ tasks.named('test') {
 
 tasks.named('jacocoTestReport') {
     dependsOn tasks.named('test')
+    classDirectories.setFrom(files(classDirectories.files.collect {
+        fileTree(dir: it, excludes: ['com/demo/portfolio/api/generated/**'])
+    }))
     reports {
         html.required = true
         html.outputLocation = layout.buildDirectory.dir('reports/test')
