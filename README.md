@@ -26,12 +26,54 @@ Reactive types (`Mono` and `Flux`) are used consistently in the API layer, with 
 
 ## Features
 
-- GraphQL API with a single endpoint (`/model`)
-- Basic CRUD operations for `Customers` and `Orders`
-- Pagination and filtering support
-- Input validation and global exception handling
-- Structured logging and Actuator health endpoints
-- H2 Console accessible at `http://localhost:8082` (configured for WebFlux)
+- **GraphQL API**: Schema-first design with a single endpoint (`/model`).
+- **Reactive Stack**: Built on Spring WebFlux, bridging blocking JPA repositories with reactive data fetchers.
+- **N+1 Optimization**: Solved using `DataLoaders` with composite keys for argument-aware batching.
+- **Security**: Query complexity analysis to prevent DoS attacks via deep/expensive queries.
+- **Pagination**: Standard offset-based pagination strategy.
+- **Error Handling**: Global exception handling producing standard GraphQL errors with extended metadata.
+- **Observability**: Structured logging and Actuator health endpoints.
+- **Tools**: H2 Console accessible at `http://localhost:8082`.
+
+## Technical Highlights & Patterns
+
+This project implements several advanced patterns to demonstrate professional backend engineering:
+
+### 1. N+1 Problem Solver (Composite Key DataLoaders)
+
+Instead of simple ID-based batching, this API uses a **Composite Record Key** (`OrdersByCustomerKey`) for DataLoaders. This allows batching child collections (Orders) while preserving arguments passed to the field (e.g., filtering orders by status *within* a batched call).
+
+- *See:* `OrdersByCustomerDataLoader.java`
+
+### 2. Query Complexity Instrumentation
+
+To protect the server from resource exhaustion, the API implements a custom `Instrumentation` that calculates the "cost" of a query before execution.
+
+- **Root Fields**: High cost.
+- **Nested Lists**: Multiplied cost.
+- **Limit**: Queries exceeding the budget (850 points) are rejected immediately.
+- *See:* `GraphQLInstrumentationConfig.java`
+
+### 3. Reactive-Blocking Bridge
+
+The application runs on Netty (WebFlux) but uses Hibernate (Blocking). It bridges these worlds by wrapping blocking repository calls in `Mono.fromCallable` and subscribing on `Schedulers.boundedElastic()`, ensuring the event loop remains non-blocking.
+
+### 4. Request Sanitization (Pre-Execution Validation)
+
+Before any query reaches the execution engine, a `WebGraphQlInterceptor` validates and sanitizes the raw request payload. This adds a security layer against injection or malformed input at the gateway level.
+
+- *See:* `SanitizingInterceptor.java`
+
+### 5. Global Error Handling
+
+Exceptions are not just thrown; they are intercepted and transformed into meaningful GraphQL errors.
+
+- **TypedGraphQLError**: Returns specific error codes (e.g., `RESOURCE_NOT_FOUND`) and HTTP status suggestions in the `extensions` map.
+- *See:* `GlobalDataFetcherExceptionHandler.java`
+
+### 6. Type-Safe Mapping
+
+Uses **MapStruct** for compile-time generation of mappers between JPA Entities and GraphQL DTOs, avoiding runtime reflection overhead.
 
 ## Getting Started
 
