@@ -99,7 +99,7 @@ class CustomerDataFetcherTest {
 
         when(source.getId()).thenReturn("1");
         when(dfe.getSource()).thenReturn(source);
-        when(dfe.getDataLoader(OrdersByCustomerDataLoader.class)).thenReturn(loader);
+        when(dfe.<OrdersByCustomerKey, List<Order>>getDataLoader(OrdersByCustomerDataLoader.class)).thenReturn(loader);
         when(loader.load(any())).thenReturn(CompletableFuture.completedFuture(List.of(order)));
 
         List<Order> orders = fetcher.ordersForCustomer(dfe, 0, 10, OrderStatus.PENDING).block();
