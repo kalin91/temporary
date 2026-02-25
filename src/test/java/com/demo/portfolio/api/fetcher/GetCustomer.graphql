@@ -1,0 +1,17 @@
+query GetCustomer($id: ID!, $orderStatus: OrderStatus, $orderPage: Int, $orderSize: Int) {
+  customer(id: $id) {
+    id
+    firstName
+    lastName
+    email
+    orders(status: $orderStatus, page: $orderPage, size: $orderSize) {
+      id
+      customer {
+        id
+      }
+      orderDate
+      status
+      totalAmount
+    }
+  }
+}
