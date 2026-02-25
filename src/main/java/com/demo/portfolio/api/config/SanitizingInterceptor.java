@@ -48,7 +48,7 @@ public class SanitizingInterceptor implements WebGraphQlInterceptor {
      */
     @Override
     @NonNull
-    public Mono<WebGraphQlResponse> intercept(@NonNull @lombok.NonNull WebGraphQlRequest request, @NonNull @lombok.NonNull Chain chain) {
+    public Mono<WebGraphQlResponse> intercept(@NonNull WebGraphQlRequest request, @NonNull Chain chain) {
         // Map WebGraphQlRequest to our internal DTO for sanitization
         GraphQLRequest dto = GraphQLRequest.builder()
             .query(request.getDocument())

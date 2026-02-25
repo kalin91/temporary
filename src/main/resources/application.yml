@@ -1,4 +1,6 @@
 spring:
+  profiles:
+    active: local
   threads:
     virtual:
       enabled: true
@@ -14,9 +16,13 @@ spring:
     hibernate:
       ddl-auto: create-drop
     show-sql: true
+  graphql:
+    graphiql:
+      enabled: true
 dgs:
   graphql:
     path: /model
+
 management:
   endpoints:
     web:
@@ -25,9 +31,26 @@ management:
   endpoint:
     health:
       show-details: always
+---
+spring:
+  config:
+    activate:
+      on-profile: local
 
 logging:
   level:
     com.demo.portfolio.api: DEBUG
     org.springframework.web: INFO
     org.hibernate.SQL: DEBUG
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+logging:
+  level:
+    com.demo.portfolio.api: INFO
+    org.springframework.web: WARN
+    org.hibernate.SQL: INFO

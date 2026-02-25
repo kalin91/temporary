@@ -56,7 +56,7 @@ The application must follow a strict layered architecture:
     -   `.exception`
 - **Documentation**: 
     -   Add full comprehensive **JavaDoc** for all main classes and every methods that include a detailed description of parameters, return values, and exceptions.
-    -   JavaDoc should be clear, concise, and informative, providing enough context for other developers to understand the purpose and usage of the code without needing to read the implementation details. Must not contains author tags, since tags or version tags.
+    -   JavaDoc should be clear, concise, and informative, providing enough context for other developers to understand the purpose and usage of the code without needing to read the implementation details. It must not contain `@author`, `@since`, or `@version` tags.
     -   Ensure code is self-documenting where possible.
     -   During Code-Review, verify that all new and modified code includes appropriate JavaDoc and adheres to the project's documentation standards.
 

@@ -9,9 +9,6 @@ import org.springframework.context.event.EventListener;
 import java.sql.SQLException;
 
 /**
- * Configuration to start H2 Console in a WebFlux application.
- */
-/**
  * Configuration class for H2 Database Console.
  * 
  * This class manages the lifecycle of the H2 web console server, enabling

@@ -11,6 +11,8 @@ import com.netflix.graphql.dgs.DgsDataFetchingEnvironment;
 import com.netflix.graphql.dgs.DgsMutation;
 import com.netflix.graphql.dgs.DgsQuery;
 import com.netflix.graphql.dgs.InputArgument;
+
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.dataloader.DataLoader;
 import org.springframework.data.domain.PageRequest;
@@ -25,10 +27,10 @@ import java.util.Objects;
  * <p>
  * This component defines the GraphQL queries and mutations for the Customer domain, including:
  * <ul>
- *   <li>Paginated and filtered retrieval of customers</li>
- *   <li>Single customer lookup by ID</li>
- *   <li>Creation, update, and deletion of customers</li>
- *   <li>Resolution of the {@code orders} field for each customer using a batched DataLoader</li>
+ * <li>Paginated and filtered retrieval of customers</li>
+ * <li>Single customer lookup by ID</li>
+ * <li>Creation, update, and deletion of customers</li>
+ * <li>Resolution of the {@code orders} field for each customer using a batched DataLoader</li>
  * </ul>
  * <p>
  * All methods return Project Reactor {@link Mono} types for reactive, non-blocking execution.
@@ -96,7 +98,7 @@ public class CustomerDataFetcher {
          * @return a {@link Mono} emitting the created {@link Customer} DTO
          */
         @DgsMutation
-        public Mono<Customer> createCustomer(@InputArgument CreateCustomerInput input) {
+        public Mono<Customer> createCustomer(@Valid @InputArgument CreateCustomerInput input) {
                 return customerService.createCustomer(input)
                         .map(customerMapper::toDto);
         }
@@ -105,7 +107,7 @@ public class CustomerDataFetcher {
         /**
          * Updates an existing customer with the provided input data.
          *
-         * @param id    the customer ID as a string
+         * @param id the customer ID as a string
          * @param input the update data for the customer
          * @return a {@link Mono} emitting the updated {@link Customer} DTO
          */
@@ -117,7 +119,7 @@ public class CustomerDataFetcher {
 
 
         /**
-         * Deletes a customer by its unique identifier.
+         * Deletes a customer by its unique identifier. Deleting a customer will automatically cascade-delete all associated orders
          *
          * @param id the customer ID as a string
          * @return a {@link Mono} emitting {@code true} if the customer was deleted, or {@code false} otherwise
@@ -131,20 +133,23 @@ public class CustomerDataFetcher {
          * Resolves the {@code Customer.orders} field using a batched DataLoader, eliminating
          * the N+1 problem when a list of customers is returned with their nested orders.
          *
-         * <p>The customer ID, optional status filter, and pagination parameters are packed into
+         * <p>
+         * The customer ID, optional status filter, and pagination parameters are packed into
          * a composite {@link OrdersByCustomerKey} and forwarded to {@link OrdersByCustomerDataLoader}.
          * All keys accumulated during a single GraphQL execution tick are dispatched in one batch;
          * filtering and pagination are pushed down to the database query inside the loader,
-         * so no in-memory post-processing is performed here.</p>
+         * so no in-memory post-processing is performed here.
+         * </p>
          *
-         * @param dfe          the DGS data-fetching environment providing the source {@link Customer}
-         * @param page         zero-based page index for the orders result set
-         * @param size         maximum number of orders to return per page
+         * @param dfe the DGS data-fetching environment providing the source {@link Customer}
+         * @param page zero-based page index for the orders result set
+         * @param size maximum number of orders to return per page
          * @param statusFilter optional {@link OrderStatus} to filter orders; {@code null} returns all statuses
          * @return a {@link Mono} emitting the filtered and paginated list of {@link Order} DTOs
          */
         @DgsData(parentType = DgsConstants.CUSTOMER.TYPE_NAME, field = DgsConstants.CUSTOMER.Orders)
-        public Mono<List<Order>> ordersForCustomer(DgsDataFetchingEnvironment dfe, @InputArgument("page") int page, @InputArgument("size") int size, @InputArgument("status") OrderStatus statusFilter) {
+        public Mono<List<Order>> ordersForCustomer(DgsDataFetchingEnvironment dfe, @InputArgument("page") int page,
+                @InputArgument("size") int size, @InputArgument("status") OrderStatus statusFilter) {
                 Customer customer = Objects.requireNonNull(dfe.getSource(), "Source for ordersForCustomer cannot be null");
                 Long customerId = Long.parseLong(customer.getId());
                 DataLoader<OrdersByCustomerKey, List<Order>> loader = dfe.getDataLoader(OrdersByCustomerDataLoader.class);

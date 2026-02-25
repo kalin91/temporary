@@ -76,25 +76,34 @@ docker run -p 8080:8080 -p 8082:8082 backend-portfolio-api
 ### Get Customers with Pagination
 
 ```graphql
-query {
-  customers(page: 0, size: 10) {
-    edges {
-      node {
+query GetCustomers($page: Int, $size: Int, $orderStatus: OrderStatus, $orderPage: Int, $orderSize: Int) {
+  customers(page: $page, size: $size) {
+    content {
+      id
+      firstName
+      lastName
+      email
+      orders(status: $orderStatus, page: $orderPage, size: $orderSize) {
         id
-        firstName
-        lastName
-        email
-        orders {
-          id
-          totalAmount
-          status
-        }
+        status
+        totalAmount
       }
     }
-    pageInfo {
-      hasNextPage
-    }
+    totalPages
+    totalElements
+    number
   }
+}
+```
+
+```json
+// variables
+{
+    "page": 0,
+    "size": 100,
+    "orderStatus": null,
+    "orderPage": 0,
+    "orderSize": 100
 }
 ```
 
