@@ -19,7 +19,24 @@ import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 /**
- * Service for managing customers.
+ * Service layer for managing Customer domain operations.
+ * <p>
+ * This class encapsulates all business logic related to customers, including:
+ * <ul>
+ *   <li>Paginated retrieval of customers</li>
+ *   <li>Single customer lookup by ID</li>
+ *   <li>Creation, update, and deletion of customers</li>
+ * </ul>
+ * <p>
+ * All methods are reactive and return Project Reactor {@link Mono} types, ensuring non-blocking execution.
+ * <p>
+ * The service enforces transactional boundaries and propagates {@link com.demo.portfolio.api.exception.ResourceNotFoundException}
+ * when a requested customer does not exist. It is intended to be used by GraphQL data fetchers and other application layers.
+ * <p>
+ * <h2>Thread Safety</h2>
+ * <p>
+ * This service is stateless and thread-safe when used as a Spring bean.
+ * </p>
  */
 @Service
 @RequiredArgsConstructor

@@ -35,7 +35,6 @@ import java.util.Objects;
  * All operations are performed asynchronously using Project Reactor's Mono and are
  * executed on bounded elastic schedulers to avoid blocking the main thread.
  * 
- * @version 1.0
  */
 @Service
 @RequiredArgsConstructor

@@ -23,6 +23,18 @@ import java.util.Objects;
 
 /**
  * GraphQL Data Fetcher for Order operations.
+ * <p>
+ * This component defines the GraphQL queries and mutations for the Order domain, including:
+ * <ul>
+ *   <li>Paginated and filtered retrieval of orders</li>
+ *   <li>Single order lookup by ID</li>
+ *   <li>Creation, update, and deletion of orders</li>
+ *   <li>Resolution of the {@code customer} field for each order using a batched DataLoader</li>
+ * </ul>
+ * <p>
+ * All methods return Project Reactor {@link Mono} types for reactive, non-blocking execution.
+ * <p>
+ * This class is a Spring bean annotated with {@link DgsComponent} and is automatically discovered by the DGS framework.
  */
 @DgsComponent
 @RequiredArgsConstructor
@@ -32,6 +44,16 @@ public class OrderDataFetcher {
         private final OrderMapper orderMapper;
         private final CustomerMapper customerMapper;
 
+
+        /**
+         * Retrieves a paginated list of orders, optionally filtered by customer ID and/or status.
+         *
+         * @param customerId the customer ID as a string (optional, may be {@code null})
+         * @param status     the order status to filter by (optional, may be {@code null})
+         * @param page       the zero-based page index (optional, defaults to 0)
+         * @param size       the maximum number of orders per page (optional, defaults to 10)
+         * @return a {@link Mono} emitting an {@link OrderConnection} containing the paginated orders and page info
+         */
         @DgsQuery
         public Mono<OrderConnection> orders(@InputArgument @Nullable String customerId, @InputArgument @Nullable OrderStatus status,
                 @InputArgument Integer page, @InputArgument Integer size) {
@@ -60,24 +82,53 @@ public class OrderDataFetcher {
                         });
         }
 
+
+        /**
+         * Retrieves a single order by its unique identifier.
+         *
+         * @param id the order ID as a string
+         * @return a {@link Mono} emitting the {@link Order} DTO, or an error if not found
+         */
         @DgsQuery
         public Mono<Order> order(@InputArgument String id) {
                 return orderService.getOrder(Long.parseLong(id))
                         .map(orderMapper::toDto);
         }
 
+
+        /**
+         * Creates a new order from the provided input.
+         *
+         * @param input the input data for the new order
+         * @return a {@link Mono} emitting the created {@link Order} DTO
+         */
         @DgsMutation
         public Mono<Order> createOrder(@InputArgument CreateOrderInput input) {
                 return orderService.createOrder(input)
                         .map(orderMapper::toDto);
         }
 
+
+        /**
+         * Updates an existing order with the provided input data.
+         *
+         * @param id    the order ID as a string
+         * @param input the update data for the order
+         * @return a {@link Mono} emitting the updated {@link Order} DTO
+         */
         @DgsMutation
         public Mono<Order> updateOrder(@InputArgument String id, @InputArgument UpdateOrderInput input) {
                 return orderService.updateOrder(Long.parseLong(id), input)
                         .map(orderMapper::toDto);
         }
 
+
+        /**
+         * Deletes an order by its unique identifier.
+         *
+         * @param id the order ID as a string
+         * @return a {@link Mono} emitting {@code true} if the order was deleted, or {@code false} otherwise
+         */
         @DgsMutation
         public Mono<Boolean> deleteOrder(@InputArgument String id) {
                 return orderService.deleteOrder(Long.parseLong(id));

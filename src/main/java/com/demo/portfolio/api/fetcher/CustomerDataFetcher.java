@@ -22,6 +22,18 @@ import java.util.Objects;
 
 /**
  * GraphQL Data Fetcher for Customer operations.
+ * <p>
+ * This component defines the GraphQL queries and mutations for the Customer domain, including:
+ * <ul>
+ *   <li>Paginated and filtered retrieval of customers</li>
+ *   <li>Single customer lookup by ID</li>
+ *   <li>Creation, update, and deletion of customers</li>
+ *   <li>Resolution of the {@code orders} field for each customer using a batched DataLoader</li>
+ * </ul>
+ * <p>
+ * All methods return Project Reactor {@link Mono} types for reactive, non-blocking execution.
+ * <p>
+ * This class is a Spring bean annotated with {@link DgsComponent} and is automatically discovered by the DGS framework.
  */
 @DgsComponent
 @RequiredArgsConstructor
@@ -30,6 +42,14 @@ public class CustomerDataFetcher {
         private final CustomerService customerService;
         private final CustomerMapper customerMapper;
 
+
+        /**
+         * Retrieves a paginated list of customers.
+         *
+         * @param page the zero-based page index (optional, defaults to 0)
+         * @param size the maximum number of customers per page (optional, defaults to 10)
+         * @return a {@link Mono} emitting a {@link CustomerConnection} containing the paginated customers and page info
+         */
         @DgsQuery
         public Mono<CustomerConnection> customers(@InputArgument Integer page, @InputArgument Integer size) {
                 int p = page != null ? page : 0;
@@ -56,24 +76,53 @@ public class CustomerDataFetcher {
                         });
         }
 
+
+        /**
+         * Retrieves a single customer by its unique identifier.
+         *
+         * @param id the customer ID as a string
+         * @return a {@link Mono} emitting the {@link Customer} DTO, or an error if not found
+         */
         @DgsQuery
         public Mono<Customer> customer(@InputArgument String id) {
                 return customerService.getCustomer(Long.parseLong(id))
                         .map(customerMapper::toDto);
         }
 
+
+        /**
+         * Creates a new customer from the provided input.
+         *
+         * @param input the input data for the new customer
+         * @return a {@link Mono} emitting the created {@link Customer} DTO
+         */
         @DgsMutation
         public Mono<Customer> createCustomer(@InputArgument CreateCustomerInput input) {
                 return customerService.createCustomer(input)
                         .map(customerMapper::toDto);
         }
 
+
+        /**
+         * Updates an existing customer with the provided input data.
+         *
+         * @param id    the customer ID as a string
+         * @param input the update data for the customer
+         * @return a {@link Mono} emitting the updated {@link Customer} DTO
+         */
         @DgsMutation
         public Mono<Customer> updateCustomer(@InputArgument String id, @InputArgument UpdateCustomerInput input) {
                 return customerService.updateCustomer(Long.parseLong(id), input)
                         .map(customerMapper::toDto);
         }
 
+
+        /**
+         * Deletes a customer by its unique identifier.
+         *
+         * @param id the customer ID as a string
+         * @return a {@link Mono} emitting {@code true} if the customer was deleted, or {@code false} otherwise
+         */
         @DgsMutation
         public Mono<Boolean> deleteCustomer(@InputArgument String id) {
                 return customerService.deleteCustomer(Long.parseLong(id));
