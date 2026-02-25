@@ -41,6 +41,7 @@ dependencies {
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'io.projectreactor:reactor-test'
+    testImplementation "io.karatelabs:karate-junit5:1.5.2"
 }
 
 tasks.named('test') {
@@ -51,4 +52,18 @@ generateJava {
     schemaPaths = ["${projectDir}/src/main/resources/schema"]
     packageName = 'com.demo.portfolio.api.generated'
     generateClient = true
+}
+
+sourceSets {
+    test {
+        resources {
+            srcDir file('src/test/java')
+            exclude '**/*.java'
+        }
+    }
+}
+
+test {
+    // Obligatorio para que Gradle reconozca los tests de JUnit 5
+    useJUnitPlatform()
 }
