@@ -52,10 +52,10 @@ public class OrderDataFetcher {
          * @param status     the order status to filter by (optional, may be {@code null})
          * @param page       the zero-based page index (optional, defaults to 0)
          * @param size       the maximum number of orders per page (optional, defaults to 10)
-         * @return a {@link Mono} emitting an {@link OrderConnection} containing the paginated orders and page info
+         * @return a {@link Mono} emitting an {@link OrderPage} containing the paginated orders and page info
          */
         @DgsQuery
-        public Mono<OrderConnection> orders(@InputArgument @Nullable String customerId, @InputArgument @Nullable OrderStatus status,
+        public Mono<OrderPage> orders(@InputArgument @Nullable String customerId, @InputArgument @Nullable OrderStatus status,
                 @InputArgument Integer page, @InputArgument Integer size) {
                 int p = page != null ? page : 0;
                 int s = size != null ? size : 10;
@@ -63,21 +63,20 @@ public class OrderDataFetcher {
 
                 return orderService.getOrders(cId, orderMapper.toEntity(status), p, s)
                         .map(orderPage -> {
-                                List<OrderEdge> edges = orderPage.getContent().stream()
-                                        .map(entity -> OrderEdge.newBuilder()
-                                                .cursor(String.valueOf(entity.getId()))
-                                                .node(orderMapper.toDto(entity))
-                                                .build())
+                                List<Order> orders = orderPage.getContent().stream()
+                                        .map(orderMapper::toDto)
                                         .toList();
 
-                                PageInfo pageInfo = PageInfo.newBuilder()
-                                        .hasNextPage(orderPage.hasNext())
-                                        .hasPreviousPage(orderPage.hasPrevious())
-                                        .build();
-
-                                return OrderConnection.newBuilder()
-                                        .edges(edges)
-                                        .pageInfo(pageInfo)
+                                return OrderPage.newBuilder()
+                                        .content(orders)
+                                        .totalElements((int) orderPage.getTotalElements())
+                                        .totalPages(orderPage.getTotalPages())
+                                        .number(orderPage.getNumber())
+                                        .size(orderPage.getSize())
+                                        .numberOfElements(orderPage.getNumberOfElements())
+                                        .first(orderPage.isFirst())
+                                        .last(orderPage.isLast())
+                                        .empty(orderPage.isEmpty())
                                         .build();
                         });
         }

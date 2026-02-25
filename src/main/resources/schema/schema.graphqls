@@ -1,7 +1,7 @@
 type Query {
-    customers(page: Int = 0, size: Int = 10): CustomerConnection
+    customers(page: Int = 0, size: Int = 10): CustomerPage
     customer(id: ID!): Customer
-    orders(customerId: ID, status: OrderStatus, page: Int = 0, size: Int = 10): OrderConnection
+    orders(customerId: ID, status: OrderStatus, page: Int = 0, size: Int = 10): OrderPage
     order(id: ID!): Order
 }
 
@@ -61,29 +61,26 @@ input UpdateOrderInput {
     totalAmount: Float
 }
 
-type CustomerConnection {
-    edges: [CustomerEdge!]!
-    pageInfo: PageInfo!
+type CustomerPage {
+    content: [Customer!]!
+    totalElements: Int!
+    totalPages: Int!
+    number: Int!
+    size: Int!
+    numberOfElements: Int!
+    first: Boolean!
+    last: Boolean!
+    empty: Boolean!
 }
 
-type CustomerEdge {
-    cursor: String!
-    node: Customer!
-}
-
-type OrderConnection {
-    edges: [OrderEdge!]!
-    pageInfo: PageInfo!
-}
-
-type OrderEdge {
-    cursor: String!
-    node: Order!
-}
-
-type PageInfo {
-    hasNextPage: Boolean!
-    hasPreviousPage: Boolean!
-    startCursor: String
-    endCursor: String
+type OrderPage {
+    content: [Order!]!
+    totalElements: Int!
+    totalPages: Int!
+    number: Int!
+    size: Int!
+    numberOfElements: Int!
+    first: Boolean!
+    last: Boolean!
+    empty: Boolean!
 }

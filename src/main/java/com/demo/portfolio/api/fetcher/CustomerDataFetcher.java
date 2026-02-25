@@ -48,30 +48,29 @@ public class CustomerDataFetcher {
          *
          * @param page the zero-based page index (optional, defaults to 0)
          * @param size the maximum number of customers per page (optional, defaults to 10)
-         * @return a {@link Mono} emitting a {@link CustomerConnection} containing the paginated customers and page info
+         * @return a {@link Mono} emitting a {@link CustomerPage} containing the paginated customers and page info
          */
         @DgsQuery
-        public Mono<CustomerConnection> customers(@InputArgument Integer page, @InputArgument Integer size) {
+        public Mono<CustomerPage> customers(@InputArgument Integer page, @InputArgument Integer size) {
                 int p = page != null ? page : 0;
                 int s = size != null ? size : 10;
 
                 return customerService.getCustomers(p, s)
                         .map(customerPage -> {
-                                List<CustomerEdge> edges = customerPage.getContent().stream()
-                                        .map(entity -> CustomerEdge.newBuilder()
-                                                .cursor(String.valueOf(entity.getId()))
-                                                .node(customerMapper.toDto(entity))
-                                                .build())
+                                List<Customer> customers = customerPage.getContent().stream()
+                                        .map(customerMapper::toDto)
                                         .toList();
 
-                                PageInfo pageInfo = PageInfo.newBuilder()
-                                        .hasNextPage(customerPage.hasNext())
-                                        .hasPreviousPage(customerPage.hasPrevious())
-                                        .build();
-
-                                return CustomerConnection.newBuilder()
-                                        .edges(edges)
-                                        .pageInfo(pageInfo)
+                                return CustomerPage.newBuilder()
+                                        .content(customers)
+                                        .totalElements((int) customerPage.getTotalElements())
+                                        .totalPages(customerPage.getTotalPages())
+                                        .number(customerPage.getNumber())
+                                        .size(customerPage.getSize())
+                                        .numberOfElements(customerPage.getNumberOfElements())
+                                        .first(customerPage.isFirst())
+                                        .last(customerPage.isLast())
+                                        .empty(customerPage.isEmpty())
                                         .build();
                         });
         }
