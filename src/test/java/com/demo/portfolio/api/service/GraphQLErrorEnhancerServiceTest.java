@@ -5,7 +5,6 @@ import graphql.ExecutionResultImpl;
 import graphql.GraphQLError;
 import graphql.GraphqlErrorBuilder;
 import graphql.schema.GraphQLEnumType;
-import graphql.schema.GraphQLEnumValueDefinition;
 import graphql.schema.GraphQLSchema;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -46,8 +45,8 @@ class GraphQLErrorEnhancerServiceTest {
 
         GraphQLEnumType enumType = GraphQLEnumType.newEnum()
                 .name("OrderStatus")
-                .value(new GraphQLEnumValueDefinition("PENDING", null))
-                .value(new GraphQLEnumValueDefinition("SHIPPED", null))
+                .value("PENDING")
+                .value("SHIPPED")
                 .build();
         when(graphQlSource.schema()).thenReturn(graphQLSchema);
         when(graphQLSchema.getType("OrderStatus")).thenReturn(enumType);
