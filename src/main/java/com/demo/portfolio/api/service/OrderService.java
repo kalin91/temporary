@@ -8,7 +8,10 @@ import com.demo.portfolio.api.generated.types.CreateOrderInput;
 import com.demo.portfolio.api.generated.types.UpdateOrderInput;
 import com.demo.portfolio.api.repository.CustomerRepository;
 import com.demo.portfolio.api.repository.OrderRepository;
+
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -30,11 +33,11 @@ import java.time.OffsetDateTime;
  * All operations are performed asynchronously using Project Reactor's Mono and are
  * executed on bounded elastic schedulers to avoid blocking the main thread.
  * 
- * @author Your Name
  * @version 1.0
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class OrderService {
 
     private final OrderRepository orderRepository;

@@ -53,7 +53,7 @@ Reactive types (`Mono` and `Flux`) are used consistently in the API layer, with 
 ```
 
 The application will start on port `8080`.
-The GraphQL endpoint is available at `http://localhost:8080/graphql`.
+The GraphQL endpoint is available at `http://localhost:8080/model`.
 GraphiQL (UI for testing queries) is available at `http://localhost:8080/graphiql`.
 
 ### Running Tests

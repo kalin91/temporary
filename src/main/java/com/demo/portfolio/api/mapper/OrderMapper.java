@@ -21,11 +21,11 @@ public interface OrderMapper {
     @Mapping(target = "customer", ignore = true) // Customer is fetched separately if needed
     Order toDto(OrderEntity entity);
 
-    // Enum domain -> enum GraphQL (mismos values: MapStruct lo hace solo)
+    // Enum domain -> GraphQL enum (same values: MapStruct handles this automatically)
     com.demo.portfolio.api.generated.types.OrderStatus toDto(
         com.demo.portfolio.api.domain.OrderStatus status);
 
-    // (opcional) GraphQL -> domain
+    // Optional: GraphQL enum -> domain enum
     com.demo.portfolio.api.domain.OrderStatus toEntity(
         com.demo.portfolio.api.generated.types.OrderStatus status);
 }

@@ -1,5 +1,7 @@
 package com.demo.portfolio.api.fetcher;
 
+import com.demo.portfolio.api.domain.OrderStatus;
+import com.demo.portfolio.api.generated.DgsConstants;
 import com.demo.portfolio.api.generated.types.*;
 import com.demo.portfolio.api.mapper.CustomerMapper;
 import com.demo.portfolio.api.mapper.OrderMapper;
@@ -16,6 +18,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.Objects;
+import static com.demo.portfolio.api.generated.DgsConstants.CUSTOMER.ORDERS_INPUT_ARGUMENT;
 
 /**
  * GraphQL Data Fetcher for Customer operations.
@@ -24,66 +27,70 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class CustomerDataFetcher {
 
-    private final CustomerService customerService;
-    private final OrderService orderService;
-    private final CustomerMapper customerMapper;
-    private final OrderMapper orderMapper;
+        private final CustomerService customerService;
+        private final OrderService orderService;
+        private final CustomerMapper customerMapper;
+        private final OrderMapper orderMapper;
 
-    @DgsQuery
-    public Mono<CustomerConnection> customers(@InputArgument Integer page, @InputArgument Integer size) {
-        int p = page != null ? page : 0;
-        int s = size != null ? size : 10;
-        
-        return customerService.getCustomers(p, s)
-                .map(customerPage -> {
-                    List<CustomerEdge> edges = customerPage.getContent().stream()
-                            .map(entity -> CustomerEdge.newBuilder()
-                                    .cursor(String.valueOf(entity.getId()))
-                                    .node(customerMapper.toDto(entity))
-                                    .build())
-                            .toList();
-                    
-                    PageInfo pageInfo = PageInfo.newBuilder()
-                            .hasNextPage(customerPage.hasNext())
-                            .hasPreviousPage(customerPage.hasPrevious())
-                            .build();
-                    
-                    return CustomerConnection.newBuilder()
-                            .edges(edges)
-                            .pageInfo(pageInfo)
-                            .build();
-                });
-    }
+        @DgsQuery
+        public Mono<CustomerConnection> customers(@InputArgument Integer page, @InputArgument Integer size) {
+                int p = page != null ? page : 0;
+                int s = size != null ? size : 10;
 
-    @DgsQuery
-    public Mono<Customer> customer(@InputArgument String id) {
-        return customerService.getCustomer(Long.parseLong(id))
-                .map(customerMapper::toDto);
-    }
+                return customerService.getCustomers(p, s)
+                        .map(customerPage -> {
+                                List<CustomerEdge> edges = customerPage.getContent().stream()
+                                        .map(entity -> CustomerEdge.newBuilder()
+                                                .cursor(String.valueOf(entity.getId()))
+                                                .node(customerMapper.toDto(entity))
+                                                .build())
+                                        .toList();
 
-    @DgsMutation
-    public Mono<Customer> createCustomer(@InputArgument CreateCustomerInput input) {
-        return customerService.createCustomer(input)
-                .map(customerMapper::toDto);
-    }
+                                PageInfo pageInfo = PageInfo.newBuilder()
+                                        .hasNextPage(customerPage.hasNext())
+                                        .hasPreviousPage(customerPage.hasPrevious())
+                                        .build();
 
-    @DgsMutation
-    public Mono<Customer> updateCustomer(@InputArgument String id, @InputArgument UpdateCustomerInput input) {
-        return customerService.updateCustomer(Long.parseLong(id), input)
-                .map(customerMapper::toDto);
-    }
+                                return CustomerConnection.newBuilder()
+                                        .edges(edges)
+                                        .pageInfo(pageInfo)
+                                        .build();
+                        });
+        }
 
-    @DgsMutation
-    public Mono<Boolean> deleteCustomer(@InputArgument String id) {
-        return customerService.deleteCustomer(Long.parseLong(id));
-    }
+        @DgsQuery
+        public Mono<Customer> customer(@InputArgument String id) {
+                return customerService.getCustomer(Long.parseLong(id))
+                        .map(customerMapper::toDto);
+        }
 
-    @DgsData(parentType = "Customer", field = "orders")
-    public Mono<List<Order>> ordersForCustomer(DgsDataFetchingEnvironment dfe) {
-        Customer customer = Objects.requireNonNull(dfe.getSource(), "Source for ordersForCustomer cannot be null");
-        return orderService.getOrders(Long.parseLong(customer.getId()), null, 0, 100)
-                .map(orderPage -> orderPage.getContent().stream()
-                        .map(orderMapper::toDto)
-                        .toList());
-    }
+        @DgsMutation
+        public Mono<Customer> createCustomer(@InputArgument CreateCustomerInput input) {
+                return customerService.createCustomer(input)
+                        .map(customerMapper::toDto);
+        }
+
+        @DgsMutation
+        public Mono<Customer> updateCustomer(@InputArgument String id, @InputArgument UpdateCustomerInput input) {
+                return customerService.updateCustomer(Long.parseLong(id), input)
+                        .map(customerMapper::toDto);
+        }
+
+        @DgsMutation
+        public Mono<Boolean> deleteCustomer(@InputArgument String id) {
+                return customerService.deleteCustomer(Long.parseLong(id));
+        }
+
+        @DgsData(parentType = DgsConstants.CUSTOMER.TYPE_NAME, field = DgsConstants.CUSTOMER.Orders)
+        public Mono<List<Order>> ordersForCustomer(DgsDataFetchingEnvironment dfe) {
+                Customer customer = Objects.requireNonNull(dfe.getSource(), "Source for ordersForCustomer cannot be null");
+                OrderStatus status = dfe.getArgument(ORDERS_INPUT_ARGUMENT.Status);
+                int page = Objects.requireNonNull(dfe.getArgument(ORDERS_INPUT_ARGUMENT.Page), "Page argument cannot be null");
+                int size = Objects.requireNonNull(dfe.getArgument(ORDERS_INPUT_ARGUMENT.Size), "Size argument cannot be null");
+                return orderService
+                        .getOrders(Long.parseLong(customer.getId()), status, page, size)
+                        .map(orderPage -> orderPage.getContent().stream()
+                                .map(orderMapper::toDto)
+                                .toList());
+        }
 }

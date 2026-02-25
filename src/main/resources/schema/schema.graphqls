@@ -20,7 +20,7 @@ type Customer {
     firstName: String!
     lastName: String!
     email: String!
-    orders: [Order!]!
+    orders(status: OrderStatus, page: Int = 0, size: Int = 10): [Order!]!
 }
 
 type Order {
