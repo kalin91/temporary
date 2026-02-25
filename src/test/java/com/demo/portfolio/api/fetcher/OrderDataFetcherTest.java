@@ -107,7 +107,7 @@ class OrderDataFetcherTest {
         when(partialCustomer.getId()).thenReturn("1");
         when(sourceOrder.getCustomer()).thenReturn(partialCustomer);
         when(dfe.getSource()).thenReturn(sourceOrder);
-        when(dfe.getDataLoader(CustomerByIdDataLoader.class)).thenReturn(loader);
+        when(dfe.<Long, CustomerEntity>getDataLoader(CustomerByIdDataLoader.class)).thenReturn(loader);
         when(loader.load(1L)).thenReturn(CompletableFuture.completedFuture(customerEntity));
         when(customerMapper.toDto(customerEntity)).thenReturn(mapped);
 
