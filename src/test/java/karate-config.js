@@ -21,6 +21,10 @@ function fn() {
   // Tiempo de espera para peticiones (en milisegundos)
   karate.configure('connectTimeout', 5000);
   karate.configure('readTimeout', 5000);
+  
+  // Imprimir siempre requests y responses para depuración
+  karate.configure('logPrettyRequest', true);
+  karate.configure('logPrettyResponse', true);
 
   return config;
 }
