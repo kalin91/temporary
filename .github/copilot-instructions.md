@@ -91,7 +91,6 @@ A local-dev fallback is defined in `application.yml` via `${API_CREDENTIALS_JSON
 - **Domains**: Implement sample domains including **Orders** and **Customers**.
 - **CRUD**: Implement basic Create, Read, Update, Delete operations.
 - **Schema**: Maintain a well-defined `src/main/resources/schema/schema.graphqls` file.
-- **Seed Data**: Provide SQL scripts or a CommandLineRunner to load sample seed data into H2 on startup.
 - **Seed Data**: Use startup seeding to load sample data from `src/main/resources/data/*.json` into H2 (implemented via `DataSeeder` as a `SmartInitializingSingleton`).
 - **Pagination & Filtering**: Implement basic pagination (Connection/Cursor or Offset based) and filtering for list queries.
 - **Validation**: Include strict input validation (JSR-303/Jakarta Validation).

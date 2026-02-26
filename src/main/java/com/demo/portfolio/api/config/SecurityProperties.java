@@ -74,7 +74,7 @@ public class SecurityProperties {
         try {
             return objectMapper.readValue(credentialsJson, new TypeReference<>() {});
         } catch (Exception e) {
-            log.error("Parsing credentials JSON failed: {}", credentialsJson);
+            log.error("Parsing credentials JSON failed - ensure API_CREDENTIALS_JSON is valid JSON", e);  
             throw new IllegalStateException("Failed to parse security.credentials-json – " +
                     "ensure API_CREDENTIALS_JSON is valid JSON", e);
         }
