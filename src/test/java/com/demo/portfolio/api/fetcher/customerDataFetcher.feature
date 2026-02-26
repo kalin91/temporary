@@ -152,6 +152,7 @@ Feature: Customer Data Fetcher Tests
     When method post
     Then status 200
     And match response.errors != null
+    And match response.errors[0].message == 'Forbidden'
     And match response.data.createCustomer == '#notpresent'
 
   Scenario: Writer cannot delete a customer
@@ -164,5 +165,6 @@ Feature: Customer Data Fetcher Tests
     When method post
     Then status 200
     And match response.errors != null
+    And match response.errors[0].message == 'Forbidden'
     And match response.data.deleteCustomer == '#notpresent'
 

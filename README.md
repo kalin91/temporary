@@ -55,6 +55,7 @@ Three role profiles are available. Roles are cumulative: `admin` holds all three
 | `admin`  | `ROLE_ADMIN`, `ROLE_WRITER`, `ROLE_READER` | All reads + all writes + `deleteCustomer`, `deleteOrder` |
 
 Public paths (no authentication required):
+
 - `GET /actuator/health` and `GET /actuator/info` — liveness/readiness probes
 - `GET /graphiql/**` — in-browser GraphQL IDE (development convenience)
 
@@ -266,4 +267,3 @@ mutation {
   }
 }
 ```
-
