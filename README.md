@@ -233,7 +233,7 @@ To build and run the application using Docker:
 ```bash
 docker build -t backend-portfolio-api .
 docker run -p 8080:8080 -p 8082:8082 \
-  -e SPRING_PROFILE=local \
+  -e SPRING_PROFILES_ACTIVE=local \
   -e API_CREDENTIALS_JSON='{"admin":{"user":"api_admin","pass":"s3cr3t","permissions":7},"writer":{"user":"api_writer","pass":"wr1t3","permissions":6},"reader":{"user":"api_reader","pass":"r3@d","permissions":4}}' \
   backend-portfolio-api
 ```
