@@ -175,3 +175,9 @@ The project should demonstrate **clean architecture**, **cloud-ready design**, a
   - `GraphQLInstrumentationConfig` enforces max query complexity (`850`).
 - **Reactive + Blocking Bridge**:
   - Services wrap blocking JPA operations with `Mono.fromCallable(...).subscribeOn(Schedulers.boundedElastic())`.
+- **Scheduler Placement Rule**:
+  - Apply `subscribeOn(Schedulers.boundedElastic())` only at the boundary where blocking work is created (service/data-loader), not in data fetchers.
+  - Avoid double scheduling (`subscribeOn` in both fetcher and service) unless a special case is documented.
+- **Reactive Error Logging Rule**:
+  - Prefer centralized error mapping/logging in `GlobalDataFetcherExceptionHandler` and interceptors.
+  - Service/data-loader boundaries may add contextual `doOnError` logs (warn for expected not-found paths, error for unexpected failures), but avoid repetitive per-step logging in fetchers.

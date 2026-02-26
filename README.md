@@ -135,6 +135,9 @@ To protect the server from resource exhaustion, the API implements a custom `Ins
 
 The application runs on Netty (WebFlux) but uses Hibernate (Blocking). It bridges these worlds by wrapping blocking repository calls in `Mono.fromCallable` and subscribing on `Schedulers.boundedElastic()`, ensuring the event loop remains non-blocking.
 
+- Scheduler placement rule: scheduling is applied at the blocking boundary (service/data-loader), not in GraphQL data fetchers.
+- Service/data-loader boundaries add contextual reactive error logs (`doOnError`) while keeping global GraphQL error shaping in the centralized handler.
+
 ### 4. Request Sanitization (Pre-Execution Validation)
 
 Before any query reaches the execution engine, a `WebGraphQlInterceptor` validates and sanitizes the raw request payload. This adds a security layer against injection or malformed input at the gateway level.

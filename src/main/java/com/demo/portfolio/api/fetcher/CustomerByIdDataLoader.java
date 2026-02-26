@@ -13,6 +13,7 @@ import reactor.core.scheduler.Schedulers;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
 
@@ -53,7 +54,7 @@ public class CustomerByIdDataLoader implements MappedBatchLoader<Long, CustomerE
     public CompletionStage<Map<Long, CustomerEntity>> load(Set<Long> customerIds) {
         log.debug("Batch-loading {} customers by ID: {}", customerIds.size(), customerIds);
 
-        return Mono.fromCallable(() -> {
+        return executeBlocking(() -> {
             List<CustomerEntity> customers = customerRepository.findAllById(customerIds);
 
             Map<Long, CustomerEntity> result = customers.stream()
@@ -61,6 +62,19 @@ public class CustomerByIdDataLoader implements MappedBatchLoader<Long, CustomerE
 
             log.debug("Batch result: {} customers found", result.size());
             return result;
-        }).subscribeOn(Schedulers.boundedElastic()).toFuture();
+        }).doOnError(ex -> log.error("CustomerByIdDataLoader.load failed for {} ids", customerIds.size(), ex))
+          .toFuture();
+    }
+
+    /**
+     * Executes blocking loader work on {@code boundedElastic}.
+     *
+     * @param action blocking action
+     * @param <T> result type
+     * @return a {@link Mono} scheduled on {@code boundedElastic}
+     */
+    private <T> Mono<T> executeBlocking(Callable<T> action) {
+        return Mono.fromCallable(action)
+            .subscribeOn(Schedulers.boundedElastic());
     }
 }

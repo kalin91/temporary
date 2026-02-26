@@ -21,6 +21,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 import java.time.OffsetDateTime;
+import java.util.concurrent.Callable;
 import java.util.Objects;
 
 /**
@@ -55,7 +56,7 @@ public class OrderService {
      */
     @Transactional(readOnly = true)
     public Mono<Page<OrderEntity>> getOrders(Long customerId, OrderStatus status, int page, int size) {
-        return Mono.fromCallable(() -> {
+        return executeBlocking("getOrders", () -> {
             boolean hasCustomerId = customerId != null;
             boolean hasStatus = status != null;
             PageRequest pageRequest = PageRequest.of(page, size);
@@ -66,7 +67,7 @@ public class OrderService {
             else if (hasCustomerId)
                 return orderRepository.findByCustomerId(customerId, pageRequest);
             return orderRepository.findAll(pageRequest);
-        }).subscribeOn(Schedulers.boundedElastic());
+        });
     }
 
     /**
@@ -77,9 +78,9 @@ public class OrderService {
      */
     @Transactional(readOnly = true)
     public Mono<OrderEntity> getOrder(@NonNull Long id) {
-        return Mono.fromCallable(() -> orderRepository.findById(id)
+        return executeBlocking("getOrder", () -> orderRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + id)))
-            .subscribeOn(Schedulers.boundedElastic());
+            ;
     }
 
     /**
@@ -90,7 +91,7 @@ public class OrderService {
      */
     @Transactional
     public Mono<OrderEntity> createOrder(CreateOrderInput input) {
-        return Mono.fromCallable(() -> {
+        return executeBlocking("createOrder", () -> {
             Long customerId = Long.parseLong(input.getCustomerId());
             CustomerEntity customer = customerRepository.findById(customerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Customer not found with id: " + customerId));
@@ -102,7 +103,7 @@ public class OrderService {
                 .totalAmount(input.getTotalAmount())
                 .build();
             return orderRepository.save(Objects.requireNonNull(entity));
-        }).subscribeOn(Schedulers.boundedElastic());
+        });
     }
 
     /**
@@ -114,7 +115,7 @@ public class OrderService {
      */
     @Transactional
     public Mono<OrderEntity> updateOrder(@NonNull Long id, UpdateOrderInput input) {
-        return Mono.fromCallable(() -> {
+        return executeBlocking("updateOrder", () -> {
             OrderEntity entity = orderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + id));
             if (input.getStatus() != null)
@@ -122,7 +123,7 @@ public class OrderService {
             if (input.getTotalAmount() != null)
                 entity.setTotalAmount(input.getTotalAmount());
             return orderRepository.save(Objects.requireNonNull(entity));
-        }).subscribeOn(Schedulers.boundedElastic());
+        });
     }
 
     /**
@@ -133,11 +134,32 @@ public class OrderService {
      */
     @Transactional
     public Mono<Boolean> deleteOrder(@NonNull Long id) {
-        return Mono.fromCallable(() -> {
+        return executeBlocking("deleteOrder", () -> {
             if (!orderRepository.existsById(id))
                 throw new ResourceNotFoundException("Order not found with id: " + id);
             orderRepository.deleteById(id);
             return true;
-        }).subscribeOn(Schedulers.boundedElastic());
+        });
+    }
+
+    /**
+     * Executes a blocking callable on {@code boundedElastic} and applies
+     * consistent service-level error logging.
+     *
+     * @param operation operation name for logs
+     * @param action blocking action to execute
+     * @param <T> result type
+     * @return a {@link Mono} running on {@code boundedElastic}
+     */
+    private <T> Mono<T> executeBlocking(String operation, Callable<T> action) {
+        return Mono.fromCallable(action)
+            .subscribeOn(Schedulers.boundedElastic())
+            .doOnError(ResourceNotFoundException.class,
+                ex -> log.warn("OrderService.{} not found: {}", operation, ex.getMessage()))
+            .doOnError(ex -> {
+                if (!(ex instanceof ResourceNotFoundException)) {
+                    log.error("OrderService.{} failed", operation, ex);
+                }
+            });
     }
 }
