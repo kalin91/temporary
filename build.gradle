@@ -78,16 +78,13 @@ tasks.withType(Test).configureEach {
 }
 
 tasks.register('karateTest', Test) {
-    group = 'verification'
     description = 'Runs only ITKarateRunner integration test'
     include '**/ITKarateRunner*'
 }
 
 test {
     exclude '**/ITKarateRunner*'
-    dependsOn karateTest
     finalizedBy tasks.named('jacocoTestReport')
-
 }
 
 
@@ -118,7 +115,7 @@ mergedTestReport.finalizedBy verifyAllTests
 check.dependsOn mergedTestReport
 
 tasks.named('jacocoTestReport') {
-    dependsOn tasks.named('test')
+    dependsOn test
     classDirectories.setFrom(files(classDirectories.files.collect {
         fileTree(dir: it, excludes: ['com/demo/portfolio/api/generated/**'])
     }))

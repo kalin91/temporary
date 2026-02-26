@@ -233,11 +233,31 @@ To build and run the application using Docker:
 ```bash
 docker build -t backend-portfolio-api .
 docker run -p 8080:8080 -p 8082:8082 \
+  -e SPRING_PROFILES_ACTIVE=local \
   -e API_CREDENTIALS_JSON='{"admin":{"user":"api_admin","pass":"s3cr3t","permissions":7},"writer":{"user":"api_writer","pass":"wr1t3","permissions":6},"reader":{"user":"api_reader","pass":"r3@d","permissions":4}}' \
   backend-portfolio-api
 ```
 
 `8080` serves the GraphQL API (`/model`). `8082` exposes the H2 web console started by `H2ConsoleConfig`.
+
+## CI/CD Pipeline
+
+The project uses GitHub Actions for Continuous Integration and Deployment.
+
+### 1. PR Validation (`.github/workflows/pr-validation.yml`)
+Triggers on Pull Requests to `main`.
+- **Build**: Compiles the code using Gradle.
+- **Tests**: Runs both Unit and Integration (Karate) tests.
+- **Checks**: Ensures the build passes before merging.
+
+### 2. Deployment (`.github/workflows/deploy.yml`)
+Triggers on Release publication (or manual dispatch).
+- **Build & Test**: Runs the full build and test suite.
+- **Docker Build**: Builds the container image.
+- **Smoke Test**: Runs the container locally and verifies health endpoints (`/actuator/health`).
+- **Push**: Pushes the image to Google Artifact Registry.
+- **Deploy**: Deploys the container to **Google Cloud Run** (North America South 1).
+
 
 ## Sample Queries
 

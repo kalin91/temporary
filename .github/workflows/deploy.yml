@@ -1,0 +1,116 @@
+name: Deploy to Cloud Run
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    env:
+      API_CREDENTIALS_JSON: ${{ secrets.API_CRED }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: "temurin"
+          cache: "gradle"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Check Java Version
+        run: java -version
+
+      - name: Build with Gradle
+        run: ./gradlew clean build
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - id: auth
+        name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          token_format: access_token # Generate an access token instead of a JSON key file
+          workload_identity_provider: ${{ secrets.GCP_WIP }}
+          service_account: ${{ secrets.GCP_ACCOUNT }}
+
+      # Login to Docker Hub (for the base images in the Dockerfile)
+      - name: Docker Hub login
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PASS }}
+
+      # Login to Google Artifact Registry
+      - name: Docker Auth GCP
+        uses: docker/login-action@v3
+        with:
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
+          registry: northamerica-south1-docker.pkg.dev
+
+      # 1. Build and Load locally for testing (target amd64 for Cloud Run)
+      - name: Build and Load for Testing
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          load: true
+          tags: test-image:latest
+          platforms: linux/amd64
+
+      # 2. Run Smoke Test (Start, Check Health, Stop)
+      - name: Run Smoke Test
+        env:
+          API_CREDENTIALS_JSON: ${{ secrets.API_CRED }}
+        run: |
+          echo "Starting container..."
+          docker run -d -p 8080:8080 \
+            --name backend-api \
+            -e SPRING_PROFILES_ACTIVE=prod \
+            -e API_CREDENTIALS_JSON="$API_CREDENTIALS_JSON" \
+            test-image:latest
+          
+          echo "Waiting for service to be healthy..."
+          # Wait up to 30 seconds for the service to be up
+          timeout 30s bash -c 'until curl -s http://localhost:8080/actuator/health | grep "UP"; do sleep 2; done'
+          
+          echo "Service is UP! Stopping container..."
+          docker stop backend-api
+          docker rm backend-api
+
+      # 3. Push to Artifact Registry (Official Image)
+      - name: Push to GCP Artifact Registry
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: ${{ secrets.GCP_REPO }}/backend-portfolio-api:latest
+
+      # 4. Deploy to Cloud Run
+      - name: Deploy to Cloud Run
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: backend-portfolio-api
+          region: northamerica-south1
+          image: ${{ secrets.GCP_REPO }}/backend-portfolio-api:latest
+          flags: |
+            --min-instances=0
+            --memory=1Gi
+            --cpu=1
+            --port=8080
+            --allow-unauthenticated
+            --set-env-vars=SPRING_PROFILES_ACTIVE=prod
+          # Si necesitas pasar el JSON de credenciales:
+          env_vars: |
+            API_CREDENTIALS_JSON=${{ secrets.API_CRED }}

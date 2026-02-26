@@ -38,6 +38,14 @@ security:
   # WARNING: The defaults below are for local-dev only. NEVER use in production.
   credentials-json: >-
     ${API_CREDENTIALS_JSON:{"admin":{"user":"api_admin","pass":"admin123","permissions":7},"writer":{"user":"api_writer","pass":"writer123","permissions":6},"reader":{"user":"api_reader","pass":"reader123","permissions":4}}}
+
+---
+spring:
+  config:
+    activate:
+      on-profile: cds
+  main:
+    web-application-type: none
 ---
 spring:
   config:

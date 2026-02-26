@@ -2,6 +2,7 @@ package com.demo.portfolio.api.config;
 
 import org.h2.tools.Server;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.context.event.ContextClosedEvent;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
@@ -17,6 +18,7 @@ import java.sql.SQLException;
  * 
  */
 @Configuration
+@Profile("local")
 public class H2ConsoleConfig {
 
     /**
