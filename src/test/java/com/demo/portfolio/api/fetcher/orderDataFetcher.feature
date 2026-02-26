@@ -116,6 +116,7 @@ Feature: Order Data Fetcher
     When method post
     Then status 200
     And match response.errors != null
+    And match response.errors[0].message == 'Forbidden'
     And match response.data.createOrder == '#notpresent'
 
   Scenario: Writer cannot delete an order
@@ -128,4 +129,5 @@ Feature: Order Data Fetcher
     When method post
     Then status 200
     And match response.errors != null
+    And match response.errors[0].message == 'Forbidden'
     And match response.data.deleteOrder == '#notpresent'
