@@ -1,5 +1,6 @@
 package com.demo.portfolio.api.fetcher;
 
+import com.demo.portfolio.api.config.Permission;
 import com.demo.portfolio.api.dto.OrdersByCustomerKey;
 import com.demo.portfolio.api.generated.DgsConstants;
 import com.demo.portfolio.api.generated.types.*;
@@ -16,6 +17,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.dataloader.DataLoader;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import reactor.core.publisher.Mono;
 
@@ -53,6 +55,7 @@ public class CustomerDataFetcher {
          * @return a {@link Mono} emitting a {@link CustomerPage} containing the paginated customers and page info
          */
         @DgsQuery
+        @PreAuthorize(Permission.ROLE_READER)
         public Mono<CustomerPage> customers(@InputArgument Integer page, @InputArgument Integer size) {
                 int p = page != null ? page : 0;
                 int s = size != null ? size : 10;
@@ -85,6 +88,7 @@ public class CustomerDataFetcher {
          * @return a {@link Mono} emitting the {@link Customer} DTO, or an error if not found
          */
         @DgsQuery
+        @PreAuthorize(Permission.ROLE_READER)
         public Mono<Customer> customer(@InputArgument String id) {
                 return customerService.getCustomer(Long.parseLong(id))
                         .map(customerMapper::toDto);
@@ -98,6 +102,7 @@ public class CustomerDataFetcher {
          * @return a {@link Mono} emitting the created {@link Customer} DTO
          */
         @DgsMutation
+        @PreAuthorize(Permission.ROLE_WRITER)
         public Mono<Customer> createCustomer(@Valid @InputArgument CreateCustomerInput input) {
                 return customerService.createCustomer(input)
                         .map(customerMapper::toDto);
@@ -112,6 +117,7 @@ public class CustomerDataFetcher {
          * @return a {@link Mono} emitting the updated {@link Customer} DTO
          */
         @DgsMutation
+        @PreAuthorize(Permission.ROLE_WRITER)
         public Mono<Customer> updateCustomer(@InputArgument String id, @InputArgument UpdateCustomerInput input) {
                 return customerService.updateCustomer(Long.parseLong(id), input)
                         .map(customerMapper::toDto);
@@ -125,6 +131,7 @@ public class CustomerDataFetcher {
          * @return a {@link Mono} emitting {@code true} if the customer was deleted, or {@code false} otherwise
          */
         @DgsMutation
+        @PreAuthorize(Permission.ROLE_ADMIN)
         public Mono<Boolean> deleteCustomer(@InputArgument String id) {
                 return customerService.deleteCustomer(Long.parseLong(id));
         }

@@ -28,6 +28,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
 
     implementation "com.netflix.graphql.dgs:graphql-dgs-reactive:${netflixDgsVersion}"
     implementation "com.netflix.graphql.dgs:graphql-dgs-spring-graphql:${netflixDgsVersion}"
@@ -42,6 +43,7 @@ dependencies {
     implementation 'com.h2database:h2'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.security:spring-security-test'
     testImplementation 'io.projectreactor:reactor-test'
     testImplementation "io.karatelabs:karate-junit5:1.5.2"
 }
@@ -98,15 +100,16 @@ tasks.register('verifyAllTests') {
     dependsOn mergedTestReport
 
     doLast {
-        println "\n=== Global Test Summary ==="
-        println "Total Passed: ${totalPassed}"
-        println "Total Failed: ${totalFailed}"
-        println "Total Skipped: ${totalSkipped}"
-        println "===========================\n"
-
+        if (totalPassed + totalFailed + totalSkipped > 0) {
+            println "\n=== Global Test Summary ==="
+            println "Total Passed: ${totalPassed}"
+            println "Total Failed: ${totalFailed}"
+            println "Total Skipped: ${totalSkipped}"
+            println "===========================\n"
+        }
         if (totalFailed > 0) {
             throw new GradleException("Tests failed in the following tasks: ${rootProject.ext.testFailures}. See merged report.")
-        } else {
+        } else if (totalPassed > 0) {
             println "All tests passed successfully."
         }
     }

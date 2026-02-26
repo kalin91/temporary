@@ -1,5 +1,6 @@
 package com.demo.portfolio.api.fetcher;
 
+import com.demo.portfolio.api.config.Permission;
 import com.demo.portfolio.api.domain.CustomerEntity;
 import com.demo.portfolio.api.generated.DgsConstants;
 import com.demo.portfolio.api.generated.types.*;
@@ -16,6 +17,7 @@ import com.netflix.graphql.dgs.InputArgument;
 import jakarta.annotation.Nullable;
 import lombok.RequiredArgsConstructor;
 import org.dataloader.DataLoader;
+import org.springframework.security.access.prepost.PreAuthorize;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
@@ -55,6 +57,7 @@ public class OrderDataFetcher {
          * @return a {@link Mono} emitting an {@link OrderPage} containing the paginated orders and page info
          */
         @DgsQuery
+        @PreAuthorize(Permission.ROLE_READER)
         public Mono<OrderPage> orders(@InputArgument @Nullable String customerId, @InputArgument @Nullable OrderStatus status,
                 @InputArgument Integer page, @InputArgument Integer size) {
                 int p = page != null ? page : 0;
@@ -89,6 +92,7 @@ public class OrderDataFetcher {
          * @return a {@link Mono} emitting the {@link Order} DTO, or an error if not found
          */
         @DgsQuery
+        @PreAuthorize(Permission.ROLE_READER)
         public Mono<Order> order(@InputArgument String id) {
                 return orderService.getOrder(Long.parseLong(id))
                         .map(orderMapper::toDto);
@@ -102,6 +106,7 @@ public class OrderDataFetcher {
          * @return a {@link Mono} emitting the created {@link Order} DTO
          */
         @DgsMutation
+        @PreAuthorize(Permission.ROLE_WRITER)
         public Mono<Order> createOrder(@InputArgument CreateOrderInput input) {
                 return orderService.createOrder(input)
                         .map(orderMapper::toDto);
@@ -116,6 +121,7 @@ public class OrderDataFetcher {
          * @return a {@link Mono} emitting the updated {@link Order} DTO
          */
         @DgsMutation
+        @PreAuthorize(Permission.ROLE_WRITER)
         public Mono<Order> updateOrder(@InputArgument String id, @InputArgument UpdateOrderInput input) {
                 return orderService.updateOrder(Long.parseLong(id), input)
                         .map(orderMapper::toDto);
@@ -129,6 +135,7 @@ public class OrderDataFetcher {
          * @return a {@link Mono} emitting {@code true} if the order was deleted, or {@code false} otherwise
          */
         @DgsMutation
+        @PreAuthorize(Permission.ROLE_ADMIN)
         public Mono<Boolean> deleteOrder(@InputArgument String id) {
                 return orderService.deleteOrder(Long.parseLong(id));
         }

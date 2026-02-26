@@ -5,7 +5,8 @@ Feature: Order Data Fetcher
     * path basePath
 
   Scenario: Get Order by ID
-    Given def query = read('GetOrder.graphql')
+    Given header Authorization = authHeader('admin')
+    And def query = read('GetOrder.graphql')
     And def variables = { id: '42' }
     And request { query: '#(query)', variables: '#(variables)' }
     When method post
@@ -27,7 +28,8 @@ Feature: Order Data Fetcher
     """
 
   Scenario: Create Order
-    Given def query = read('CreateOrder.graphql')
+    Given header Authorization = authHeader('admin')
+    And def query = read('CreateOrder.graphql')
     And def variables =
     """
     {
@@ -47,7 +49,8 @@ Feature: Order Data Fetcher
     And match response.data.createOrder.orderDate == '#notnull'
 
   Scenario: Get Orders by Customer and Status
-    Given def query = read('GetOrdersByCustomerAndStatus.graphql')
+    Given header Authorization = authHeader('admin')
+    And def query = read('GetOrdersByCustomerAndStatus.graphql')
     And def variables =
     """
     {
@@ -67,7 +70,8 @@ Feature: Order Data Fetcher
     And match each response.data.orders.content[*].customer.id == variables.customerId
 
   Scenario: Update Order
-    Given def query = read('UpdateOrder.graphql')
+    Given header Authorization = authHeader('admin')
+    And def query = read('UpdateOrder.graphql')
     And def variables =
     """
     {
@@ -86,9 +90,44 @@ Feature: Order Data Fetcher
     And match response.data.updateOrder.totalAmount == variables.input.totalAmount
 
   Scenario: Delete Order
-    Given def query = read('DeleteOrder.graphql')
+    Given header Authorization = authHeader('admin')
+    And def query = read('DeleteOrder.graphql')
     And def variables = { "id": "39" }
     And request { query: '#(query)', variables: '#(variables)' }
     When method post
     Then status 200
     And match response.data.deleteOrder == true
+
+  Scenario: Reader cannot create an order
+    # ROLE_READER only has read access – createOrder requires ROLE_WRITER or higher.
+    # The API returns HTTP 200 with a GraphQL errors array (no data).
+    Given header Authorization = authHeader('reader')
+    And def query = read('CreateOrder.graphql')
+    And def variables =
+    """
+    {
+      "input": {
+        "customerId": "1",
+        "totalAmount": 9.99
+      }
+    }
+    """
+    And request { query: '#(query)', variables: '#(variables)' }
+    When method post
+    Then status 200
+    And match response.errors != null
+    And match response.errors[0].message == 'Forbidden'
+    And match response.data.createOrder == '#notpresent'
+
+  Scenario: Writer cannot delete an order
+    # ROLE_WRITER can create/update but not delete – deleteOrder requires ROLE_ADMIN.
+    # The API returns HTTP 200 with a GraphQL errors array (no data).
+    Given header Authorization = authHeader('writer')
+    And def query = read('DeleteOrder.graphql')
+    And def variables = { "id": "1" }
+    And request { query: '#(query)', variables: '#(variables)' }
+    When method post
+    Then status 200
+    And match response.errors != null
+    And match response.errors[0].message == 'Forbidden'
+    And match response.data.deleteOrder == '#notpresent'

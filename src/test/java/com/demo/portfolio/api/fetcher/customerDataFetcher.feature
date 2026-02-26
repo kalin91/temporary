@@ -5,7 +5,8 @@ Feature: Customer Data Fetcher Tests
     * path basePath
 
   Scenario: Get Customer by ID with Orders
-    Given def query = read('GetCustomer.graphql')
+    Given header Authorization = authHeader('admin')
+    And def query = read('GetCustomer.graphql')
     And def variables =
     """
     {
@@ -37,7 +38,8 @@ Feature: Customer Data Fetcher Tests
     """
 
   Scenario: Get Customers with Pagination
-    Given def query = read('GetCustomers.graphql')
+    Given header Authorization = authHeader('admin')
+    And def query = read('GetCustomers.graphql')
     And def variables =
     """
     {
@@ -80,7 +82,8 @@ Feature: Customer Data Fetcher Tests
     """
 
   Scenario: Create Customer
-    Given def query = read('CreateCustomer.graphql')
+    Given header Authorization = authHeader('admin')
+    And def query = read('CreateCustomer.graphql')
     And def variables =
     """
     {
@@ -100,7 +103,8 @@ Feature: Customer Data Fetcher Tests
     And match response.data.createCustomer.email == variables.input.email
 
   Scenario: Update Customer
-    Given def query = read('UpdateCustomer.graphql')
+    Given header Authorization = authHeader('admin')
+    And def query = read('UpdateCustomer.graphql')
     And def variables =
     """
     {
@@ -121,9 +125,46 @@ Feature: Customer Data Fetcher Tests
     And match response.data.updateCustomer.email == variables.input.email
 
   Scenario: Delete Customer
-    Given def query = read('DeleteCustomer.graphql')
+    Given header Authorization = authHeader('admin')
+    And def query = read('DeleteCustomer.graphql')
     And def variables = { "id": "12" }
     And request { query: '#(query)', variables: '#(variables)' }
     When method post
     Then status 200
     And match response.data.deleteCustomer == true
+
+  Scenario: Reader cannot create a customer
+    # ROLE_READER only has read access – createCustomer requires ROLE_WRITER or higher.
+    # The API returns HTTP 200 with a GraphQL errors array (no data).
+    Given header Authorization = authHeader('reader')
+    And def query = read('CreateCustomer.graphql')
+    And def variables =
+    """
+    {
+      "input": {
+        "firstName": "Unauthorized",
+        "lastName": "User",
+        "email": "unauthorized@example.com"
+      }
+    }
+    """
+    And request { query: '#(query)', variables: '#(variables)' }
+    When method post
+    Then status 200
+    And match response.errors != null
+    And match response.errors[0].message == 'Forbidden'
+    And match response.data.createCustomer == '#notpresent'
+
+  Scenario: Writer cannot delete a customer
+    # ROLE_WRITER can create/update but not delete – deleteCustomer requires ROLE_ADMIN.
+    # The API returns HTTP 200 with a GraphQL errors array (no data).
+    Given header Authorization = authHeader('writer')
+    And def query = read('DeleteCustomer.graphql')
+    And def variables = { "id": "1" }
+    And request { query: '#(query)', variables: '#(variables)' }
+    When method post
+    Then status 200
+    And match response.errors != null
+    And match response.errors[0].message == 'Forbidden'
+    And match response.data.deleteCustomer == '#notpresent'
+

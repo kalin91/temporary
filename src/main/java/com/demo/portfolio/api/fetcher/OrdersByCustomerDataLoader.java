@@ -18,6 +18,7 @@ import reactor.core.scheduler.Schedulers;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
 
@@ -92,7 +93,7 @@ public class OrdersByCustomerDataLoader implements MappedBatchLoader<OrdersByCus
         PageRequest pageRequest = keys.stream().findAny().map(OrdersByCustomerKey::pageRequest).orElseThrow();
         OrderStatus status = orderMapper.toEntity(keys.stream().findAny().map(OrdersByCustomerKey::status).orElse(null));
         log.debug("Batch-loading orders for {} customer IDs: {}", customerIds.size(), customerIds);
-        return Mono.fromCallable(() -> {
+        return executeBlocking(() -> {
             List<OrderEntity> all = orderRepository.findByCustomerIdInAndOptionalStatus(customerIds, status, pageRequest);
 
             // Group results by customer ID. The proxy getId() call does NOT trigger
@@ -111,6 +112,23 @@ public class OrdersByCustomerDataLoader implements MappedBatchLoader<OrdersByCus
 
             log.debug("Batch result: {} orders across {} customers", all.size(), grouped.size());
             return result;
-        }).subscribeOn(Schedulers.boundedElastic()).toFuture();
+        }).doOnError(ex -> log.error(
+            "OrdersByCustomerDataLoader.load failed for {} keys ({} customer ids)",
+            keys.size(),
+            customerIds.size(),
+            ex))
+          .toFuture();
+    }
+
+    /**
+     * Executes blocking loader work on {@code boundedElastic}.
+     *
+     * @param action blocking action
+     * @param <T> result type
+     * @return a {@link Mono} scheduled on {@code boundedElastic}
+     */
+    private <T> Mono<T> executeBlocking(Callable<T> action) {
+        return Mono.fromCallable(action)
+            .subscribeOn(Schedulers.boundedElastic());
     }
 }
