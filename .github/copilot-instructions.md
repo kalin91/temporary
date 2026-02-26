@@ -14,6 +14,7 @@ This file provides context and guidelines for AI agents working on this project.
 - **GraphQL**: Netflix DGS Framework
 - **Persistence**: Spring Data JPA with Hibernate
 - **Database**: H2 Database (In-Memory for demo, accessible via console)
+- **Security**: Spring Security (HTTP Basic Auth + `@EnableReactiveMethodSecurity`)
 - **Containerization**: Docker
 
 ## Architecture Guidelines
@@ -29,6 +30,47 @@ The application must follow a strict layered architecture:
 - **Mapping**: Use MapStruct or explicit manual mappers to convert between Entities and DTOs.
 - **Clean Code**: Follow SOLID principles.
 - **Cloud-Ready**: Design for statelessness and containerization.
+
+## Security Model
+
+### Authentication
+Every GraphQL operation requires **HTTP Basic Auth** (`@EnableWebFluxSecurity`). The following paths are public:
+- `/actuator/health`, `/actuator/info` — liveness/readiness probes
+- `/graphiql/**` — in-browser GraphQL IDE
+
+### Authorization (Method-Level)
+Method-level security is enforced via `@EnableReactiveMethodSecurity` and `@PreAuthorize` annotations on DGS data fetcher methods. SpEL expression constants are defined in the `Permission` enum to keep annotations DRY.
+
+| Role          | Permitted Operations |
+|---------------|----------------------|
+| `ROLE_READER` | All query methods: `customers`, `customer`, `orders`, `order` |
+| `ROLE_WRITER` | `ROLE_READER` permissions + `createCustomer`, `updateCustomer`, `createOrder`, `updateOrder` |
+| `ROLE_ADMIN`  | `ROLE_WRITER` permissions + `deleteCustomer`, `deleteOrder` |
+
+### Permission Bitmask (`Permission` enum)
+Roles are derived from a bitmask stored in the `permissions` field of each credential entry:
+- `ADMIN = 1`, `WRITER = 2`, `READER = 4` (additive)
+- `admin` profile: `permissions=7` (1+2+4) → `ROLE_ADMIN, ROLE_WRITER, ROLE_READER`
+- `writer` profile: `permissions=6` (2+4) → `ROLE_WRITER, ROLE_READER`
+- `reader` profile: `permissions=4` → `ROLE_READER`
+
+Use `Permission.ROLE_ADMIN`, `Permission.ROLE_WRITER`, `Permission.ROLE_READER` as values for `@PreAuthorize`.
+
+### Credential Configuration
+Credentials are loaded from the `API_CREDENTIALS_JSON` environment variable. The JSON shape is:
+```json
+{
+  "admin":  { "user": "api_admin",  "pass": "...", "permissions": 7 },
+  "writer": { "user": "api_writer", "pass": "...", "permissions": 6 },
+  "reader": { "user": "api_reader", "pass": "...", "permissions": 4 }
+}
+```
+A local-dev fallback is defined in `application.yml` via `${API_CREDENTIALS_JSON:...}`. NEVER commit production passwords. In production, supply `API_CREDENTIALS_JSON` as an environment secret.
+
+### Adding New GraphQL Operations
+- **Queries** must have `@PreAuthorize(Permission.ROLE_READER)`.
+- **Create/Update mutations** must have `@PreAuthorize(Permission.ROLE_WRITER)`.
+- **Delete mutations** must have `@PreAuthorize(Permission.ROLE_ADMIN)`.
 
 ## Functional Requirements
 - **Domains**: Implement sample domains including **Orders** and **Customers**.
@@ -61,8 +103,37 @@ The application must follow a strict layered architecture:
     -   During Code-Review, verify that all new and modified code includes appropriate JavaDoc and adheres to the project's documentation standards.
 
 ## Testing Strategy
-- **Unit Tests**: Use JUnit 5 and Mockito for isolated definitions.
-- **Integration Tests**: Test GraphQL execution logic using `@DgsQueryExecutor` or similar integration test utilities provided by DGS.
+
+### Unit Tests (JUnit 5 + Mockito)
+- **Framework**: JUnit 5 (Jupiter) with Mockito for mocking. Always annotate test classes with `@ExtendWith(MockitoExtension.class)`.
+- **Scope**: Test one class in isolation. Mock all collaborators with `@Mock`. Inject them via constructor or directly.
+- **Naming Convention**: Method names should describe the behaviour being tested, e.g. `customersMapsPage()` or `adminUserHasAllRoles()`.
+- **Assertions**: Use JUnit 5's `org.junit.jupiter.api.Assertions.*` (e.g. `assertEquals`, `assertTrue`, `assertNotNull`, `assertSame`). Use `assertThrows` for exception cases.
+- **Reactive**: For `Mono`/`Flux` in unit tests, block with `.block()` — this is acceptable in test context because no reactive pipeline is running.
+- **Security tests**: Instantiate `SecurityConfig` directly (no Spring context needed). Pass a `BCryptPasswordEncoder` and an `ObjectMapper` manually. Build `SecurityProperties` programmatically.
+- **Coverage**: Every public method of every new or modified class must have at least one test. Edge cases (nulls, empty collections, boundary values) must also be covered.
+- **Command**: `./gradlew test`
+
+### Integration Tests (Karate)
+- **Framework**: Karate DSL 1.5.2 (`io.karatelabs:karate-junit5`), run via `ITKarateRunner` with `@SpringBootTest(webEnvironment = RANDOM_PORT)`.
+- **Feature files**: Located alongside the Java source in `src/test/java/.../fetcher/*.feature`. Each file covers one DGS data fetcher.
+- **Authentication**: Every scenario must set the `Authorization` header explicitly:
+  ```gherkin
+  Given header Authorization = authHeader('admin')
+  ```
+  Use `authHeader('reader')` or `authHeader('writer')` for role-specific tests. The `authHeader(role)` function is defined in `karate-config.js` and reads credentials from `API_CREDENTIALS_JSON` (falls back to local-dev defaults).
+- **Access-Denied Scenarios**: Each feature file must include at least two negative authorization scenarios:
+  - A `reader` principal attempting a create/update mutation — expect HTTP 200 with `response.errors != null` and the mutation field absent (`#notpresent`).
+  - A `writer` principal attempting a delete mutation — expect HTTP 200 with `response.errors != null` and the mutation field absent (`#notpresent`).
+- **Assertions**: Use `match`, `match each`, and `#regex` matchers. Prefer structural matchers (`#string`, `#number`, `#notnull`, `#notpresent`) over hardcoded values to keep tests stable across seed data changes.
+- **karate-config.js**: Defines `baseUrl`, `basePath`, and the `authHeader(role)` helper. Uses `JSON.parse()` (not `karate.fromJson`) and `new java.lang.String(combined).getBytes(UTF_8)` for Base64 encoding.
+- **Command**: `./gradlew karateTest`
+
+### Full Suite
+```bash
+./gradlew verifyAllTests   # runs test + karateTest, fails if either has failures
+./gradlew check            # same + generates merged HTML report
+```
 
 ## Deliverables
 - **Dockerfile**: Minimal image for running the application.
