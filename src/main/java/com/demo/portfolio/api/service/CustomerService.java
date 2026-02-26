@@ -8,7 +8,9 @@ import com.demo.portfolio.api.repository.CustomerRepository;
 
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+import java.util.concurrent.Callable;
 import java.util.Objects;
 
 import org.springframework.data.domain.Page;
@@ -40,6 +42,7 @@ import reactor.core.scheduler.Schedulers;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class CustomerService {
 
     private final CustomerRepository customerRepository;
@@ -53,8 +56,7 @@ public class CustomerService {
      */
     @Transactional(readOnly = true)
     public Mono<Page<CustomerEntity>> getCustomers(int page, int size) {
-        return Mono.fromCallable(() -> customerRepository.findAll(PageRequest.of(page, size)))
-            .subscribeOn(Schedulers.boundedElastic());
+        return executeBlocking("getCustomers", () -> customerRepository.findAll(PageRequest.of(page, size)));
     }
 
     /**
@@ -65,9 +67,9 @@ public class CustomerService {
      */
     @Transactional(readOnly = true)
     public Mono<CustomerEntity> getCustomer(@NonNull Long id) {
-        return Mono.fromCallable(() -> customerRepository.findById(id)
+        return executeBlocking("getCustomer", () -> customerRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Customer not found with id: " + id)))
-            .subscribeOn(Schedulers.boundedElastic());
+            ;
     }
 
     /**
@@ -78,14 +80,14 @@ public class CustomerService {
      */
     @Transactional
     public Mono<CustomerEntity> createCustomer(CreateCustomerInput input) {
-        return Mono.fromCallable(() -> {
+        return executeBlocking("createCustomer", () -> {
             CustomerEntity entity = CustomerEntity.builder()
                 .firstName(input.getFirstName())
                 .lastName(input.getLastName())
                 .email(input.getEmail())
                 .build();
             return customerRepository.save(Objects.requireNonNull(entity));
-        }).subscribeOn(Schedulers.boundedElastic());
+        });
     }
 
     /**
@@ -97,7 +99,7 @@ public class CustomerService {
      */
     @Transactional
     public Mono<CustomerEntity> updateCustomer(@NonNull Long id, UpdateCustomerInput input) {
-        return Mono.fromCallable(() -> {
+        return executeBlocking("updateCustomer", () -> {
             CustomerEntity entity = customerRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Customer not found with id: " + id));
 
@@ -109,7 +111,7 @@ public class CustomerService {
                 entity.setEmail(input.getEmail());
 
             return customerRepository.save(Objects.requireNonNull(entity));
-        }).subscribeOn(Schedulers.boundedElastic());
+        });
     }
 
     /**
@@ -120,12 +122,33 @@ public class CustomerService {
      */
     @Transactional
     public Mono<Boolean> deleteCustomer(@NonNull Long id) {
-        return Mono.fromCallable(() -> {
+        return executeBlocking("deleteCustomer", () -> {
             if (!customerRepository.existsById(id)) {
                 throw new ResourceNotFoundException("Customer not found with id: " + id);
             }
             customerRepository.deleteById(id);
             return true;
-        }).subscribeOn(Schedulers.boundedElastic());
+        });
+    }
+
+    /**
+     * Executes a blocking callable on {@code boundedElastic} and applies
+     * consistent service-level error logging.
+     *
+     * @param operation operation name for logs
+     * @param action blocking action to execute
+     * @param <T> result type
+     * @return a {@link Mono} running on {@code boundedElastic}
+     */
+    private <T> Mono<T> executeBlocking(String operation, Callable<T> action) {
+        return Mono.fromCallable(action)
+            .subscribeOn(Schedulers.boundedElastic())
+            .doOnError(ResourceNotFoundException.class,
+                ex -> log.warn("CustomerService.{} not found: {}", operation, ex.getMessage()))
+            .doOnError(ex -> {
+                if (!(ex instanceof ResourceNotFoundException)) {
+                    log.error("CustomerService.{} failed", operation, ex);
+                }
+            });
     }
 }

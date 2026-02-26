@@ -19,11 +19,13 @@ import org.springframework.data.domain.PageRequest;
 
 import java.util.List;
 import java.util.Optional;
+import reactor.core.publisher.Mono;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@SuppressWarnings("null")
 class OrderServiceTest {
 
     @Mock
@@ -37,7 +39,7 @@ class OrderServiceTest {
     @Test
     void getOrdersUsesCombinedFilter() {
         Page<OrderEntity> page = new PageImpl<>(List.of());
-        when(orderRepository.findByCustomerIdAndStatus(1L, OrderStatus.PENDING, PageRequest.of(0, 5))).thenReturn(page);
+        when(orderRepository.findByCustomerIdAndStatus(eq(1L), eq(OrderStatus.PENDING), any(PageRequest.class))).thenReturn(page);
 
         Page<OrderEntity> result = orderService.getOrders(1L, OrderStatus.PENDING, 0, 5).block();
 
@@ -86,7 +88,8 @@ class OrderServiceTest {
     void getOrderThrowsWhenMissing() {
         when(orderRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class, () -> orderService.getOrder(99L).block());
+        Mono<OrderEntity> result = orderService.getOrder(99L);
+        assertThrows(ResourceNotFoundException.class, result::block);
     }
 
     @Test
@@ -135,6 +138,7 @@ class OrderServiceTest {
     void deleteOrderThrowsWhenMissing() {
         when(orderRepository.existsById(1L)).thenReturn(false);
 
-        assertThrows(ResourceNotFoundException.class, () -> orderService.deleteOrder(1L).block());
+        Mono<Boolean> result = orderService.deleteOrder(1L);
+        assertThrows(ResourceNotFoundException.class, result::block);
     }
 }

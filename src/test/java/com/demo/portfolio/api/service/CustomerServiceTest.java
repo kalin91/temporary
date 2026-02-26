@@ -13,6 +13,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.Optional;
@@ -21,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@SuppressWarnings("null")
 class CustomerServiceTest {
 
     @Mock
@@ -53,7 +55,8 @@ class CustomerServiceTest {
     void getCustomerThrowsWhenMissing() {
         when(customerRepository.findById(9L)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class, () -> customerService.getCustomer(9L).block());
+        Mono<CustomerEntity> result = customerService.getCustomer(9L);
+        assertThrows(ResourceNotFoundException.class, result::block);
     }
 
     @Test
@@ -103,7 +106,8 @@ class CustomerServiceTest {
     void deleteCustomerThrowsWhenMissing() {
         when(customerRepository.existsById(1L)).thenReturn(false);
 
-        assertThrows(ResourceNotFoundException.class, () -> customerService.deleteCustomer(1L).block());
+        Mono<Boolean> result = customerService.deleteCustomer(1L);
+        assertThrows(ResourceNotFoundException.class, result::block);
         verify(customerRepository, never()).deleteById(anyLong());
     }
 }
