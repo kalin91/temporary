@@ -157,8 +157,9 @@ A local-dev fallback is defined in `application.yml` via `${API_CREDENTIALS_JSON
 
 ## Deliverables
 
-- **Dockerfile**: Minimal image for running the application.
+- **Dockerfile**: Minimal image for running the application using Eclipse Temurin 21 (Alpine). Supports CDS (Class Data Sharing) for faster startup.
 - **README.md**: Comprehensive instructions on building, running, and testing the application.
+- **CI/CD**: GitHub Actions workflows for PR validation (`pr-validation.yml`) and deployment to Cloud Run (`deploy.yml`).
 
 ## Quality Statement
 
