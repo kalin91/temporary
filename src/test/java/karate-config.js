@@ -18,6 +18,10 @@ function fn() {
     config.baseUrl = 'https://pending.com';
   }
 
+  // HTTP Basic Auth – admin credentials are used because the test suite covers mutations.
+  // These are demo credentials defined in application.yml.
+  karate.configure('headers', { Authorization: 'Basic YWRtaW46YWRtaW4xMjM=' });
+
   // Tiempo de espera para peticiones (en milisegundos)
   karate.configure('connectTimeout', 5000);
   karate.configure('readTimeout', 5000);

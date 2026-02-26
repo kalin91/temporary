@@ -31,6 +31,20 @@ management:
   endpoint:
     health:
       show-details: always
+
+# Demo credentials – override these via environment variables or a secrets manager in production.
+# WARNING: These default values are intentionally simple for local-dev / portfolio demo use only.
+#          CHANGE_THEM before any real deployment. Never commit production passwords to source control.
+# ROLE_ADMIN: full access (queries + mutations)
+# ROLE_USER:  read-only access (queries only)
+security:
+  users:
+    admin:
+      username: admin
+      password: admin123    # CHANGE_ME – insecure demo default
+    user:
+      username: user
+      password: user123     # CHANGE_ME – insecure demo default
 ---
 spring:
   config:

@@ -16,6 +16,7 @@ import com.netflix.graphql.dgs.InputArgument;
 import jakarta.annotation.Nullable;
 import lombok.RequiredArgsConstructor;
 import org.dataloader.DataLoader;
+import org.springframework.security.access.prepost.PreAuthorize;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
@@ -102,6 +103,7 @@ public class OrderDataFetcher {
          * @return a {@link Mono} emitting the created {@link Order} DTO
          */
         @DgsMutation
+        @PreAuthorize("hasRole('ADMIN')")
         public Mono<Order> createOrder(@InputArgument CreateOrderInput input) {
                 return orderService.createOrder(input)
                         .map(orderMapper::toDto);
@@ -116,6 +118,7 @@ public class OrderDataFetcher {
          * @return a {@link Mono} emitting the updated {@link Order} DTO
          */
         @DgsMutation
+        @PreAuthorize("hasRole('ADMIN')")
         public Mono<Order> updateOrder(@InputArgument String id, @InputArgument UpdateOrderInput input) {
                 return orderService.updateOrder(Long.parseLong(id), input)
                         .map(orderMapper::toDto);
@@ -129,6 +132,7 @@ public class OrderDataFetcher {
          * @return a {@link Mono} emitting {@code true} if the order was deleted, or {@code false} otherwise
          */
         @DgsMutation
+        @PreAuthorize("hasRole('ADMIN')")
         public Mono<Boolean> deleteOrder(@InputArgument String id) {
                 return orderService.deleteOrder(Long.parseLong(id));
         }
