@@ -16,6 +16,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.dataloader.DataLoader;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import reactor.core.publisher.Mono;
 
@@ -98,6 +99,7 @@ public class CustomerDataFetcher {
          * @return a {@link Mono} emitting the created {@link Customer} DTO
          */
         @DgsMutation
+        @PreAuthorize("hasRole('ADMIN')")
         public Mono<Customer> createCustomer(@Valid @InputArgument CreateCustomerInput input) {
                 return customerService.createCustomer(input)
                         .map(customerMapper::toDto);
@@ -112,6 +114,7 @@ public class CustomerDataFetcher {
          * @return a {@link Mono} emitting the updated {@link Customer} DTO
          */
         @DgsMutation
+        @PreAuthorize("hasRole('ADMIN')")
         public Mono<Customer> updateCustomer(@InputArgument String id, @InputArgument UpdateCustomerInput input) {
                 return customerService.updateCustomer(Long.parseLong(id), input)
                         .map(customerMapper::toDto);
@@ -125,6 +128,7 @@ public class CustomerDataFetcher {
          * @return a {@link Mono} emitting {@code true} if the customer was deleted, or {@code false} otherwise
          */
         @DgsMutation
+        @PreAuthorize("hasRole('ADMIN')")
         public Mono<Boolean> deleteCustomer(@InputArgument String id) {
                 return customerService.deleteCustomer(Long.parseLong(id));
         }
