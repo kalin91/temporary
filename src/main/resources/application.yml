@@ -32,19 +32,16 @@ management:
     health:
       show-details: always
 
-# Demo credentials – override these via environment variables or a secrets manager in production.
-# WARNING: These default values are intentionally simple for local-dev / portfolio demo use only.
-#          CHANGE_THEM before any real deployment. Never commit production passwords to source control.
-# ROLE_ADMIN: full access (queries + mutations)
-# ROLE_USER:  read-only access (queries only)
+# Credentials are loaded from the API_CREDENTIALS_JSON environment variable at runtime.
+# The JSON must follow this shape (keys = role profiles, values = user/pass pairs):
+#   { "admin":  { "user": "<name>", "pass": "<secret>" },
+#     "writer": { "user": "<name>", "pass": "<secret>" },
+#     "reader": { "user": "<name>", "pass": "<secret>" } }
+# Roles: admin → CRUD | writer → CRU | reader → R
+# WARNING: The default below is for local-dev only. NEVER use these passwords in production.
 security:
-  users:
-    admin:
-      username: admin
-      password: admin123    # CHANGE_ME – insecure demo default
-    user:
-      username: user
-      password: user123     # CHANGE_ME – insecure demo default
+  credentials-json: >-
+    ${API_CREDENTIALS_JSON:{"admin":{"user":"api_admin","pass":"admin123"},"writer":{"user":"api_writer","pass":"writer123"},"reader":{"user":"api_reader","pass":"reader123"}}}
 ---
 spring:
   config:

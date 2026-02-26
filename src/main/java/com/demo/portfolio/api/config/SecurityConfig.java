@@ -1,6 +1,7 @@
 package com.demo.portfolio.api.config;
 
-import org.springframework.beans.factory.annotation.Value;
+import com.demo.portfolio.api.dto.CredentialDto;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
@@ -14,14 +15,18 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 
+import java.util.List;
+import java.util.Map;
+
 /**
  * Spring Security configuration for the portfolio API.
  *
- * <p>Secures all GraphQL operations using HTTP Basic authentication with two in-memory
- * principals:
+ * <p>Secures all GraphQL operations using HTTP Basic authentication with three in-memory
+ * principals loaded from the {@code API_CREDENTIALS_JSON} environment variable:
  * <ul>
- *   <li>{@code ROLE_USER} – read-only access (queries)</li>
- *   <li>{@code ROLE_ADMIN} – full access including mutations</li>
+ *   <li>{@code admin}  key → {@code ROLE_ADMIN, ROLE_WRITER, ROLE_READER} – full CRUD access</li>
+ *   <li>{@code writer} key → {@code ROLE_WRITER, ROLE_READER} – create, read, and update access</li>
+ *   <li>{@code reader} key → {@code ROLE_READER} – read-only access (queries only)</li>
  * </ul>
  *
  * <p>The following paths are publicly accessible without authentication:
@@ -31,8 +36,9 @@ import org.springframework.security.web.server.SecurityWebFilterChain;
  * </ul>
  *
  * <p>CSRF protection is disabled because the API is stateless (no session cookies are issued).
- * Credentials are loaded from {@code application.yml} under the {@code security.users.*} keys,
- * making them easy to override per environment without touching source code.
+ * Credentials are loaded at startup from {@link SecurityProperties}, which in turn reads
+ * the {@code API_CREDENTIALS_JSON} environment variable (with a local-dev default in
+ * {@code application.yml}).
  */
 @Configuration
 @EnableWebFluxSecurity
@@ -62,40 +68,46 @@ public class SecurityConfig {
     }
 
     /**
-     * Creates the in-memory user store with two demo principals.
+     * Creates the in-memory user store from the credentials parsed by {@link SecurityProperties}.
      *
-     * <p><strong>Note:</strong> These are demo credentials intended for portfolio / local-dev use.
-     * In a production deployment replace this bean with a persistent user store and proper
-     * secret management.
+     * <p>Roles are assigned based on the JSON map key:
+     * <ul>
+     *   <li>{@code admin}  → {@code ROLE_ADMIN, ROLE_WRITER, ROLE_READER}</li>
+     *   <li>{@code writer} → {@code ROLE_WRITER, ROLE_READER}</li>
+     *   <li>any other key  → {@code ROLE_READER}</li>
+     * </ul>
      *
-     * @param adminUsername the username for the admin principal (from {@code application.yml})
-     * @param adminPassword the plain-text password for the admin principal
-     * @param userUsername  the username for the read-only principal
-     * @param userPassword  the plain-text password for the read-only principal
-     * @param encoder       the {@link PasswordEncoder} used to hash the supplied passwords
-     * @return a {@link MapReactiveUserDetailsService} holding both principals
+     * @param securityProperties the {@link SecurityProperties} bean holding the raw credentials JSON
+     * @param objectMapper       the Jackson {@link ObjectMapper} used to deserialize the JSON
+     * @param encoder            the {@link PasswordEncoder} used to hash passwords before storage
+     * @return a {@link MapReactiveUserDetailsService} holding all configured principals
      */
     @Bean
     public MapReactiveUserDetailsService userDetailsService(
-            @Value("${security.users.admin.username}") String adminUsername,
-            @Value("${security.users.admin.password}") String adminPassword,
-            @Value("${security.users.user.username}") String userUsername,
-            @Value("${security.users.user.password}") String userPassword,
+            SecurityProperties securityProperties,
+            ObjectMapper objectMapper,
             PasswordEncoder encoder) {
 
-        UserDetails admin = User.builder()
-                .username(adminUsername)
-                .password(encoder.encode(adminPassword))
-                .roles("ADMIN", "USER")
-                .build();
+        Map<String, CredentialDto> credentials = securityProperties.parseCredentials(objectMapper);
 
-        UserDetails user = User.builder()
-                .username(userUsername)
-                .password(encoder.encode(userPassword))
-                .roles("USER")
-                .build();
+        List<UserDetails> users = credentials.entrySet().stream()
+                .map(entry -> {
+                    String roleKey = entry.getKey();
+                    CredentialDto cred = entry.getValue();
+                    String[] roles = switch (roleKey) {
+                        case "admin"  -> new String[]{"ADMIN", "WRITER", "READER"};
+                        case "writer" -> new String[]{"WRITER", "READER"};
+                        default       -> new String[]{"READER"};
+                    };
+                    return User.builder()
+                            .username(cred.user())
+                            .password(encoder.encode(cred.pass()))
+                            .roles(roles)
+                            .build();
+                })
+                .toList();
 
-        return new MapReactiveUserDetailsService(admin, user);
+        return new MapReactiveUserDetailsService(users);
     }
 
     /**
@@ -108,3 +120,4 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 }
+

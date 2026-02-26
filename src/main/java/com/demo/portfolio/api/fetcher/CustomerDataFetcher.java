@@ -99,7 +99,7 @@ public class CustomerDataFetcher {
          * @return a {@link Mono} emitting the created {@link Customer} DTO
          */
         @DgsMutation
-        @PreAuthorize("hasRole('ADMIN')")
+        @PreAuthorize("hasRole('WRITER')")
         public Mono<Customer> createCustomer(@Valid @InputArgument CreateCustomerInput input) {
                 return customerService.createCustomer(input)
                         .map(customerMapper::toDto);
@@ -114,7 +114,7 @@ public class CustomerDataFetcher {
          * @return a {@link Mono} emitting the updated {@link Customer} DTO
          */
         @DgsMutation
-        @PreAuthorize("hasRole('ADMIN')")
+        @PreAuthorize("hasRole('WRITER')")
         public Mono<Customer> updateCustomer(@InputArgument String id, @InputArgument UpdateCustomerInput input) {
                 return customerService.updateCustomer(Long.parseLong(id), input)
                         .map(customerMapper::toDto);

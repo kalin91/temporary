@@ -103,7 +103,7 @@ public class OrderDataFetcher {
          * @return a {@link Mono} emitting the created {@link Order} DTO
          */
         @DgsMutation
-        @PreAuthorize("hasRole('ADMIN')")
+        @PreAuthorize("hasRole('WRITER')")
         public Mono<Order> createOrder(@InputArgument CreateOrderInput input) {
                 return orderService.createOrder(input)
                         .map(orderMapper::toDto);
@@ -118,7 +118,7 @@ public class OrderDataFetcher {
          * @return a {@link Mono} emitting the updated {@link Order} DTO
          */
         @DgsMutation
-        @PreAuthorize("hasRole('ADMIN')")
+        @PreAuthorize("hasRole('WRITER')")
         public Mono<Order> updateOrder(@InputArgument String id, @InputArgument UpdateOrderInput input) {
                 return orderService.updateOrder(Long.parseLong(id), input)
                         .map(orderMapper::toDto);
