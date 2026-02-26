@@ -26,9 +26,9 @@ import java.util.Set;
  * Secures all GraphQL operations using HTTP Basic authentication with three in-memory
  * principals loaded from the {@code API_CREDENTIALS_JSON} environment variable:
  * <ul>
- * <li>{@code 7} → {@code ROLE_ADMIN, ROLE_WRITER, ROLE_READER}</li>
- * <li>{@code 6} → {@code ROLE_WRITER, ROLE_READER}</li>
- * <li>{@code 4} → {@code ROLE_READER}</li>
+ * <li>{@code admin} key → {@code ROLE_ADMIN, ROLE_WRITER, ROLE_READER} – full CRUD access (permissions bitmask 7)</li>
+ * <li>{@code writer} key → {@code ROLE_WRITER, ROLE_READER} – create/read/update access (permissions bitmask 6)</li>
+ * <li>{@code reader} key → {@code ROLE_READER} – read-only access (permissions bitmask 4)</li>
  * </ul>
  *
  * <p>
@@ -74,12 +74,13 @@ public class SecurityConfig {
      * Creates the in-memory user store from the credentials parsed by {@link SecurityProperties}.
      *
      * <p>
-     * Roles are assigned based on the JSON map key according to their permissions:
+     * Roles are derived from the {@code permissions} bitmask field in each credential entry:
      * <ul>
-     * <li>{@code 7} → {@code ROLE_ADMIN, ROLE_WRITER, ROLE_READER}</li>
-     * <li>{@code 6} → {@code ROLE_WRITER, ROLE_READER}</li>
-     * <li>{@code 4} → {@code ROLE_READER}</li>
+     * <li>bit 1 ({@code ADMIN}) → {@code ROLE_ADMIN}</li>
+     * <li>bit 2 ({@code WRITER}) → {@code ROLE_WRITER}</li>
+     * <li>bit 4 ({@code READER}) → {@code ROLE_READER}</li>
      * </ul>
+     * For example, an {@code admin} entry with {@code permissions=7} receives all three roles.
      *
      * @param securityProperties the {@link SecurityProperties} bean holding the raw credentials JSON
      * @param objectMapper the Jackson {@link ObjectMapper} used to deserialize the JSON

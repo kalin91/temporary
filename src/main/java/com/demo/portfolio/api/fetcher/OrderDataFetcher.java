@@ -57,6 +57,7 @@ public class OrderDataFetcher {
          * @return a {@link Mono} emitting an {@link OrderPage} containing the paginated orders and page info
          */
         @DgsQuery
+        @PreAuthorize(Permission.ROLE_READER)
         public Mono<OrderPage> orders(@InputArgument @Nullable String customerId, @InputArgument @Nullable OrderStatus status,
                 @InputArgument Integer page, @InputArgument Integer size) {
                 int p = page != null ? page : 0;
@@ -91,6 +92,7 @@ public class OrderDataFetcher {
          * @return a {@link Mono} emitting the {@link Order} DTO, or an error if not found
          */
         @DgsQuery
+        @PreAuthorize(Permission.ROLE_READER)
         public Mono<Order> order(@InputArgument String id) {
                 return orderService.getOrder(Long.parseLong(id))
                         .map(orderMapper::toDto);

@@ -18,23 +18,20 @@ function fn() {
     config.baseUrl = 'https://pending.com';
   }
 
-  // HTTP Basic Auth – admin credentials are used because the test suite covers mutations.
-  // These are demo credentials defined in application.yml.
-  const json = java.lang.System.getenv('API_CREDENTIALS_JSON');
+  // HTTP Basic Auth helpers – builds a 'Basic <base64>' header for the given role profile.
+  // Reads credentials from API_CREDENTIALS_JSON env var; falls back to safe local-dev defaults.
+  const DEFAULT_CREDS = '{"admin":{"user":"api_admin","pass":"admin123","permissions":7},' +
+      '"writer":{"user":"api_writer","pass":"writer123","permissions":6},' +
+      '"reader":{"user":"api_reader","pass":"reader123","permissions":4}}';
 
-  if (!json) {
-    karate.log('WARNING: API_CREDENTIALS_JSON not set');
-  }
-
-  const creds = karate.fromJson(json);
+  const credsJson = java.lang.System.getenv('API_CREDENTIALS_JSON') || DEFAULT_CREDS;
+  const creds = JSON.parse(credsJson);
 
   function authHeader(role) {
-    const user = creds[role].user;
-    const pass = creds[role].pass;
-
-    const token = java.util.Base64.getEncoder()
-      .encodeToString((user + ':' + pass).bytes);
-
+    const c = creds[role];
+    const combined = c.user + ':' + c.pass;
+    const bytes = new java.lang.String(combined).getBytes(java.nio.charset.StandardCharsets.UTF_8);
+    const token = java.util.Base64.getEncoder().encodeToString(bytes);
     return 'Basic ' + token;
   }
 
