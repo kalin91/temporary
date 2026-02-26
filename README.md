@@ -33,7 +33,8 @@ Reactive types (`Mono` and `Flux`) are used consistently in the API layer, with 
 - **Security**: HTTP Basic Auth + role-based access control on every GraphQL operation. Query complexity analysis guards against resource-exhaustion attacks.
 - **Pagination**: Standard offset-based pagination strategy.
 - **Error Handling**: Global exception handling producing standard GraphQL errors with extended metadata.
-- **Observability**: Structured logging and Actuator health endpoints.
+- **Interceptors Pipeline**: Request sanitization before execution plus response-time enhancement of enum validation errors.
+- **Observability**: SLF4J-based application logging and Actuator health endpoints.
 - **Tools**: H2 Console accessible at `http://localhost:8082`.
 
 ## Security
@@ -42,17 +43,15 @@ Reactive types (`Mono` and `Flux`) are used consistently in the API layer, with 
 
 Every GraphQL operation is protected by **HTTP Basic Auth**. The API enforces role-based authorization at the method level using Spring Security's `@PreAuthorize` annotation on DGS data fetcher methods. This means authorization is checked *after* authentication, giving precise per-operation control.
 
-Two CodeQL `spring-disabled-csrf-protection` alerts are intentional false positives — the API is fully stateless and does not issue session cookies, so CSRF attacks cannot be mounted against it.
+CSRF protection is intentionally disabled in `SecurityConfig` because the API is stateless and does not use session cookies.
 
 ### Role Profiles
 
 Three role profiles are available. Roles are cumulative: `admin` holds all three roles.
 
-| Profile  | Spring Roles Granted                   | Permitted Operations                        |
-|----------|----------------------------------------|---------------------------------------------|
-| `reader` | `ROLE_READER`                          | Read-only queries (`customers`, `customer`, `orders`, `order`) |
-| `writer` | `ROLE_WRITER`, `ROLE_READER`           | All reads + `createCustomer`, `updateCustomer`, `createOrder`, `updateOrder` |
-| `admin`  | `ROLE_ADMIN`, `ROLE_WRITER`, `ROLE_READER` | All reads + all writes + `deleteCustomer`, `deleteOrder` |
+- `reader` → `ROLE_READER` → read-only queries (`customers`, `customer`, `orders`, `order`)
+- `writer` → `ROLE_WRITER`, `ROLE_READER` → all reads + `createCustomer`, `updateCustomer`, `createOrder`, `updateOrder`
+- `admin` → `ROLE_ADMIN`, `ROLE_WRITER`, `ROLE_READER` → all reads + all writes + `deleteCustomer`, `deleteOrder`
 
 Public paths (no authentication required):
 
@@ -105,7 +104,7 @@ curl -u api_admin:admin123 -X POST http://localhost:8080/model \
 
 The `Permission` enum in `com.demo.portfolio.api.config` encodes each permission level as a single bit. This allows a credential JSON entry to declare its roles via a compact integer field rather than a list of strings. The `SecurityConfig` converts each entry's bitmask into Spring `GrantedAuthority` values at startup using `Permission.fromMask(int)`.
 
-```
+```text
 ADMIN  = 1  → ROLE_ADMIN  (deleteCustomer, deleteOrder)
 WRITER = 2  → ROLE_WRITER (createCustomer, updateCustomer, createOrder, updateOrder)
 READER = 4  → ROLE_READER (customers, customer, orders, order)
@@ -140,16 +139,24 @@ The application runs on Netty (WebFlux) but uses Hibernate (Blocking). It bridge
 
 Before any query reaches the execution engine, a `WebGraphQlInterceptor` validates and sanitizes the raw request payload. This adds a security layer against injection or malformed input at the gateway level.
 
+- Enforced guards in `QuerySanitizerService`: max length (`10_000` chars), max depth (`10`), dangerous pattern detection, and GraphQL syntax parsing.
+
 - *See:* `SanitizingInterceptor.java`
 
-### 5. Global Error Handling
+### 5. Response Error Enhancement
+
+Some GraphQL validation errors (like invalid enum values) are generated before data fetchers execute. The API post-processes those errors to return clearer messages with valid enum values.
+
+- *See:* `ErrorEnhancerInterceptor.java`, `GraphQLErrorEnhancerService.java`
+
+### 6. Global Error Handling
 
 Exceptions are not just thrown; they are intercepted and transformed into meaningful GraphQL errors.
 
-- **TypedGraphQLError**: Returns specific error codes (e.g., `RESOURCE_NOT_FOUND`) and HTTP status suggestions in the `extensions` map.
+- **TypedGraphQLError**: Returns specific error codes (e.g., `NOT_FOUND`, `BAD_REQUEST`, `INTERNAL_ERROR`) and HTTP status suggestions in the `extensions` map.
 - *See:* `GlobalDataFetcherExceptionHandler.java`
 
-### 6. Type-Safe Mapping
+### 7. Type-Safe Mapping
 
 Uses **MapStruct** for compile-time generation of mappers between JPA Entities and GraphQL DTOs, avoiding runtime reflection overhead.
 
@@ -176,6 +183,8 @@ The application will start on port `8080`.
 The GraphQL endpoint is available at `http://localhost:8080/model`.
 GraphiQL (UI for testing queries) is available at `http://localhost:8080/graphiql`.
 
+On startup, when the database is empty, sample data is seeded from JSON resources (`src/main/resources/data/customers.json` and `src/main/resources/data/orders.json`) by `DataSeeder`.
+
 > **Note:** When running locally without setting `API_CREDENTIALS_JSON`, the application uses the built-in development defaults (`api_admin` / `admin123`, `api_writer` / `writer123`, `api_reader` / `reader123`). GraphiQL requires these credentials too — use the **HTTP Headers** pane to set `Authorization: Basic YXBpX2FkbWluOmFkbWluMTIz` (base64 of `api_admin:admin123`).
 
 ### Running Tests
@@ -185,7 +194,9 @@ The project employs a comprehensive testing strategy combining unit and integrat
 #### **1. Unit Testing (JUnit 5 & Mockito)**
 
 - **Scope**: Internal business logic, service layer, and configuration classes.
-- **Command**: `./gradlew test` (skips Karate tests)
+- **Command**: `./gradlew test`
+
+> **Important:** In the current Gradle configuration, `test` depends on `karateTest`, so `./gradlew test` executes Karate integration tests first and then unit tests.
 
 #### **2. Integration Testing (Karate)**
 
@@ -204,6 +215,12 @@ Run both suites and generate a combined HTML report:
 ./gradlew check
 ```
 
+Or run just the merged verification/report phase explicitly:
+
+```bash
+./gradlew verifyAllTests
+```
+
 - **Report Location**: `build/reports/tests/merged/index.html`
 
 ### Docker
@@ -216,6 +233,8 @@ docker run -p 8080:8080 -p 8082:8082 \
   -e API_CREDENTIALS_JSON='{"admin":{"user":"api_admin","pass":"s3cr3t","permissions":7},"writer":{"user":"api_writer","pass":"wr1t3","permissions":6},"reader":{"user":"api_reader","pass":"r3@d","permissions":4}}' \
   backend-portfolio-api
 ```
+
+`8080` serves the GraphQL API (`/model`). `8082` exposes the H2 web console started by `H2ConsoleConfig`.
 
 ## Sample Queries
 

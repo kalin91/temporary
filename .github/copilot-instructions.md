@@ -10,7 +10,7 @@ This file provides context and guidelines for AI agents working on this project.
 ## Technology Stack
 
 - **Languages**: Java 21
-- **Framework**: Spring Boot 3.4.13
+- **Framework**: Spring Boot 3.5.11
 - **Build Tool**: Gradle 8.14.3
 - **Reactive Stack**: Spring WebFlux (Project Reactor)
 - **GraphQL**: Netflix DGS Framework
@@ -92,18 +92,19 @@ A local-dev fallback is defined in `application.yml` via `${API_CREDENTIALS_JSON
 - **CRUD**: Implement basic Create, Read, Update, Delete operations.
 - **Schema**: Maintain a well-defined `src/main/resources/schema/schema.graphqls` file.
 - **Seed Data**: Provide SQL scripts or a CommandLineRunner to load sample seed data into H2 on startup.
+- **Seed Data**: Use startup seeding to load sample data from `src/main/resources/data/*.json` into H2 (implemented via `DataSeeder` as a `SmartInitializingSingleton`).
 - **Pagination & Filtering**: Implement basic pagination (Connection/Cursor or Offset based) and filtering for list queries.
 - **Validation**: Include strict input validation (JSR-303/Jakarta Validation).
 - **Error Handling**: Implement global exception handling to return meaningful GraphQL errors (DataFetchingExceptionHandler).
 - **Observability**:
-  - **Logging**: Use structured logging (SLF4J).
+  - **Logging**: Use SLF4J-based application logging.
   - **Health**: Expose Spring Actuator health endpoints.
 
 ## Configuration & Coding Standards
 
 - **Configuration**: Use `application.yml`. Ensure environment-specific settings are clear.
 - **Package Structure**:
-  - `com.java.portfolio.api` (Root)
+  - `com.demo.portfolio.api` (Root)
   - `.domain` (Entities)
   - `.dto` (Data Transfer Objects)
   - `.fetcher` (GraphQL Data Fetchers)
@@ -130,6 +131,7 @@ A local-dev fallback is defined in `application.yml` via `${API_CREDENTIALS_JSON
 - **Security tests**: Instantiate `SecurityConfig` directly (no Spring context needed). Pass a `BCryptPasswordEncoder` and an `ObjectMapper` manually. Build `SecurityProperties` programmatically.
 - **Coverage**: Every public method of every new or modified class must have at least one test. Edge cases (nulls, empty collections, boundary values) must also be covered.
 - **Command**: `./gradlew test`
+- **Execution Detail**: In current Gradle configuration, `test` depends on `karateTest`; running `./gradlew test` executes Karate first and then unit tests.
 
 ### Integration Tests (Karate)
 
@@ -141,8 +143,8 @@ A local-dev fallback is defined in `application.yml` via `${API_CREDENTIALS_JSON
   ```
   Use `authHeader('reader')` or `authHeader('writer')` for role-specific tests. The `authHeader(role)` function is defined in `karate-config.js` and reads credentials from `API_CREDENTIALS_JSON` (falls back to local-dev defaults).
 - **Access-Denied Scenarios**: Each feature file must include at least two negative authorization scenarios:
-  - A `reader` principal attempting a create/update mutation — expect HTTP 200 with `response.errors != null` and the mutation field absent (`#notpresent`).
-  - A `writer` principal attempting a delete mutation — expect HTTP 200 with `response.errors != null` and the mutation field absent (`#notpresent`).
+  - A `reader` principal attempting a create/update mutation — expect HTTP 200 with `response.errors != null`, `response.errors[0].message == 'Forbidden'`, and the mutation field absent (`#notpresent`).
+  - A `writer` principal attempting a delete mutation — expect HTTP 200 with `response.errors != null`, `response.errors[0].message == 'Forbidden'`, and the mutation field absent (`#notpresent`).
 - **Assertions**: Use `match`, `match each`, and `#regex` matchers. Prefer structural matchers (`#string`, `#number`, `#notnull`, `#notpresent`) over hardcoded values to keep tests stable across seed data changes.
 - **karate-config.js**: Defines `baseUrl`, `basePath`, and the `authHeader(role)` helper. Uses `JSON.parse()` (not `karate.fromJson`) and `new java.lang.String(combined).getBytes(UTF_8)` for Base64 encoding.
 - **Command**: `./gradlew karateTest`
@@ -162,3 +164,14 @@ A local-dev fallback is defined in `application.yml` via `${API_CREDENTIALS_JSON
 ## Quality Statement
 
 The project should demonstrate **clean architecture**, **cloud-ready design**, and **professional backend engineering practices**.
+
+## Implementation Notes for Agents
+
+- **Interceptors Pipeline**:
+  - `SanitizingInterceptor` runs on request path and validates/sanitizes incoming GraphQL payloads before execution.
+  - `ErrorEnhancerInterceptor` runs on response path and enhances enum coercion errors via `GraphQLErrorEnhancerService`.
+- **Query Hardening**:
+  - `QuerySanitizerService` enforces max query length (`10_000`), max depth (`10`), rejects dangerous patterns, and validates syntax by parsing GraphQL AST.
+  - `GraphQLInstrumentationConfig` enforces max query complexity (`850`).
+- **Reactive + Blocking Bridge**:
+  - Services wrap blocking JPA operations with `Mono.fromCallable(...).subscribeOn(Schedulers.boundedElastic())`.
