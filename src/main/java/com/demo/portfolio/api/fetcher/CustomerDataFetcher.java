@@ -55,6 +55,7 @@ public class CustomerDataFetcher {
          * @return a {@link Mono} emitting a {@link CustomerPage} containing the paginated customers and page info
          */
         @DgsQuery
+        @PreAuthorize(Permission.ROLE_READER)
         public Mono<CustomerPage> customers(@InputArgument Integer page, @InputArgument Integer size) {
                 int p = page != null ? page : 0;
                 int s = size != null ? size : 10;
@@ -87,6 +88,7 @@ public class CustomerDataFetcher {
          * @return a {@link Mono} emitting the {@link Customer} DTO, or an error if not found
          */
         @DgsQuery
+        @PreAuthorize(Permission.ROLE_READER)
         public Mono<Customer> customer(@InputArgument String id) {
                 return customerService.getCustomer(Long.parseLong(id))
                         .map(customerMapper::toDto);

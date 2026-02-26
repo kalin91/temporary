@@ -23,9 +23,9 @@ import static org.junit.jupiter.api.Assertions.*;
 class SecurityConfigTest {
 
     private static final String CREDENTIALS_JSON =
-            "{\"admin\":{\"user\":\"api_admin\",\"pass\":\"admin123\"}," +
-            "\"writer\":{\"user\":\"api_writer\",\"pass\":\"writer123\"}," +
-            "\"reader\":{\"user\":\"api_reader\",\"pass\":\"reader123\"}}";
+            "{\"admin\":{\"user\":\"api_admin\",\"pass\":\"admin123\",\"permissions\":7}," +
+            "\"writer\":{\"user\":\"api_writer\",\"pass\":\"writer123\",\"permissions\":6}," +
+            "\"reader\":{\"user\":\"api_reader\",\"pass\":\"reader123\",\"permissions\":4}}";
 
     private final SecurityConfig securityConfig = new SecurityConfig();
     private final PasswordEncoder encoder = new BCryptPasswordEncoder();
