@@ -8,6 +8,8 @@ on:
 jobs:
   copilot-setup-steps: # This name is mandatory
     runs-on: ubuntu-latest
+    env:
+      API_CREDENTIALS_JSON: ${{ secrets.API_CRED }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

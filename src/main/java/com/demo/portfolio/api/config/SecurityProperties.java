@@ -3,8 +3,13 @@ package com.demo.portfolio.api.config;
 import com.demo.portfolio.api.dto.CredentialDto;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import jakarta.validation.constraints.NotBlank;
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
+import org.springframework.validation.annotation.Validated;
 
 import java.util.Map;
 
@@ -18,9 +23,9 @@ import java.util.Map;
  *
  * <pre>{@code
  * {
- *   "admin":  { "user": "api_admin",  "pass": "..." },
- *   "writer": { "user": "api_writer", "pass": "..." },
- *   "reader": { "user": "api_reader", "pass": "..." }
+ *   "admin":  { "user": "api_admin",  "pass": "...", "permissions": 7 },
+ *   "writer": { "user": "api_writer", "pass": "...", "permissions": 6 },
+ *   "reader": { "user": "api_reader", "pass": "...", "permissions": 4 }
  * }
  * }</pre>
  *
@@ -30,8 +35,11 @@ import java.util.Map;
  */
 @Component
 @ConfigurationProperties(prefix = "security")
+@Slf4j
+@Validated
 public class SecurityProperties {
 
+    @NotBlank
     private String credentialsJson;
 
     /**
@@ -66,6 +74,7 @@ public class SecurityProperties {
         try {
             return objectMapper.readValue(credentialsJson, new TypeReference<>() {});
         } catch (Exception e) {
+            log.error("Parsing credentials JSON failed: {}", credentialsJson);
             throw new IllegalStateException("Failed to parse security.credentials-json – " +
                     "ensure API_CREDENTIALS_JSON is valid JSON", e);
         }

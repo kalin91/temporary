@@ -32,16 +32,8 @@ management:
     health:
       show-details: always
 
-# Credentials are loaded from the API_CREDENTIALS_JSON environment variable at runtime.
-# The JSON must follow this shape (keys = role profiles, values = user/pass pairs):
-#   { "admin":  { "user": "<name>", "pass": "<secret>" },
-#     "writer": { "user": "<name>", "pass": "<secret>" },
-#     "reader": { "user": "<name>", "pass": "<secret>" } }
-# Roles: admin → CRUD | writer → CRU | reader → R
-# WARNING: The default below is for local-dev only. NEVER use these passwords in production.
 security:
-  credentials-json: >-
-    ${API_CREDENTIALS_JSON:{"admin":{"user":"api_admin","pass":"admin123"},"writer":{"user":"api_writer","pass":"writer123"},"reader":{"user":"api_reader","pass":"reader123"}}}
+  credentials-json: ${API_CREDENTIALS_JSON:}
 ---
 spring:
   config:
